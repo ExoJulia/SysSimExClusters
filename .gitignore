@@ -1,0 +1,15 @@
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+deps/deps.jl
+*.jl~
+julia_types
+# ExoplanetsSysSim specific
+libcorbits.so
+profile*
+# Example specific
+*.out
+observed_catalog_planets.txt
+observed_catalog_stars.txt
+physical_catalog_planets.txt
+physical_catalog_stars.txt
