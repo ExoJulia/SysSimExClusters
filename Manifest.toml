@@ -176,7 +176,9 @@ version = "0.17.0"
 
 [[ExoplanetsSysSim]]
 deps = ["CORBITS", "CSV", "Combinatorics", "Compat", "DataFrames", "Distributions", "FileIO", "HypothesisTests", "JLD", "JLD2", "LibGit2", "Libdl", "PDMats", "Pkg", "SpecialFunctions", "Statistics", "StatsFuns"]
-path = "/home/eford/.julia_v7/dev/ExoplanetsSysSim"
+git-tree-sha1 = "d8405efb3034b70bdf3194bcd80c3a086e2992b9"
+repo-rev = "master"
+repo-url = "git@github.com:ExoJulia/ExoplanetsSysSim.jl.git"
 uuid = "e0ba718c-02ec-11e9-384b-dd2930072415"
 version = "0.1.0"
 
