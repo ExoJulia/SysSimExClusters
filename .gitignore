@@ -3,11 +3,10 @@
 *.jl.mem
 deps/deps.jl
 *.jl~
+Manifest.toml
 julia_types
-# ExoplanetsSysSim specific
 libcorbits.so
 profile*
-# Example specific
 *.out
 observed_catalog_planets.txt
 observed_catalog_stars.txt

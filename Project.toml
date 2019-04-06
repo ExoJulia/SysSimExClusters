@@ -2,6 +2,7 @@
 CORBITS = "2ef0fd6c-02ed-11e9-22ee-f18eda6e5e26"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 ExoplanetsSysSim = "e0ba718c-02ec-11e9-384b-dd2930072415"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
