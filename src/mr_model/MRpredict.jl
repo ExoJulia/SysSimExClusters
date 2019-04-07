@@ -6,6 +6,8 @@ using Distributions
 using Roots #if we want to use the 'find_zero()' function
 using Optim
 
+dir_path = dirname(@__FILE__)
+
 ##### This code is a translation of 'MRpredict.R' at 'https://github.com/Bo-Ning/Predicting-exoplanet-mass-and-radius-relationship/blob/master/MR-predict/MRpredict.R'
 
 struct MR_param_Ning2018
@@ -245,7 +247,7 @@ end
 
 ##### To initialize the M-R model parameters:
 
-weights_mle = CSV.read("weights.mle.csv")[:x]
+weights_mle = CSV.read(joinpath(dir_path, "weights.mle.csv"))[:x]
 degrees = 55
 
 N_keep = 25
@@ -367,7 +369,7 @@ close(f)
 
 ##### To load a pre-computed table for interpolating the mass radius relation:
 
-log_Mass_table = CSV.read("MRpredict_table_weights3025_R1001_Q1001.txt", header=3)
+log_Mass_table = CSV.read(joinpath(dir_path, "MRpredict_table_weights3025_R1001_Q1001.txt"), header=3)
 
 #One way to do the interpolation is to use "GridInterpolations" but this is very slow:
 #=
