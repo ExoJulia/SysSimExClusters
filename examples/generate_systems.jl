@@ -1,13 +1,15 @@
-include("clusters.jl")
+dir_path = dirname(@__FILE__)
+
+include(joinpath(dir_path, "../src/clusters.jl"))
 sim_param = setup_sim_param_model()
 
-# WARNING: ERIC ADDED TO SPEED THINGS UP
-add_param_fixed(sim_param,"num_targets_sim_pass_one", 8)
-@time cat_phys = generate_kepler_physical_catalog(sim_param)
+
+
+
 
 ##### To generate the underlying systems:
 
-add_param_fixed(sim_param,"num_targets_sim_pass_one", 8000)
+add_param_fixed(sim_param,"num_targets_sim_pass_one", 80006)
 @time cat_phys = generate_kepler_physical_catalog(sim_param)
 
 ##### For saving the underlying/true planets/systems:

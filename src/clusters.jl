@@ -7,4 +7,5 @@ include("model.jl")
 include("summary_stats.jl")
 include("distance.jl")
 #include("stellar_catalog.jl")
-include("MRpredict.jl")
+
+include("mr_model/MRpredict.jl")
