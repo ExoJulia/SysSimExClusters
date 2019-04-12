@@ -1,10 +1,10 @@
-include("clusters.jl")
+dir_path = dirname(@__FILE__)
+
+include(joinpath(dir_path, "../src/clusters.jl"))
 
 sim_param = setup_sim_param_model()
-add_param_fixed(sim_param,"num_targets_sim_pass_one",80006)
-# WARNING: ERIC ADDED TO SPEED THINGS UP FOR TESTING
-# add_param_fixed(sim_param,"num_targets_sim_pass_one",8006)
-add_param_fixed(sim_param,"max_incl_sys",80.0) #degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
+add_param_fixed(sim_param,"num_targets_sim_pass_one", 139232)
+add_param_fixed(sim_param,"max_incl_sys", 80.0) #degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
 
 
 

@@ -10,47 +10,17 @@ include("misc_functions.jl")
 
 ##### To load the DR25 KOI catalog and apply the necessary cuts:
 
-Q1Q17_DR25 = CSV.read("q1_q17_dr25_koi.tab_selectcols_new.csv", header=19, allowmissing=:all)
-
-
-#If using our own cuts applied to the stellar and koi catalogs:
-
-#=
-Q1Q17_DR25_stellar = CSV.read("q1_q17_dr25_stellar_koi.tab_selectcols.csv", header=30, allowmissing=:all)
-Q1Q17_DR25_stellar_all = CSV.read("q1_q17_dr25_stellar_koi.tab_all.csv", header=1, allowmissing=:all)
-
-N_Kepler_targets = sum((Q1Q17_DR25_stellar_all[:teff] .> 4000.) .& (Q1Q17_DR25_stellar_all[:teff] .< 7000.) .& (Q1Q17_DR25_stellar_all[:logg] .> 4.))
-println("Total number of Kepler targets satisfying our cuts: ", N_Kepler_targets)
-
-table_confirmed = Q1Q17_DR25[(Q1Q17_DR25[:koi_disposition] .== "CONFIRMED") .| (Q1Q17_DR25[:koi_disposition] .== "CANDIDATE"), :] #Table containing only the confirmed and candidate objects
-table_stellar = Q1Q17_DR25_stellar
-
-table_confirmed = table_confirmed[(table_confirmed[:koi_period] .> get_real(sim_param,"min_period")) .& (table_confirmed[:koi_period] .< get_real(sim_param,"max_period")), :] #to make additional cuts in period P to be comparable to our simulated sample
-table_confirmed = table_confirmed[(table_confirmed[:koi_prad] .> get_real(sim_param,"min_radius")/ExoplanetsSysSim.earth_radius) .& (table_confirmed[:koi_prad] .< get_real(sim_param,"max_radius")/ExoplanetsSysSim.earth_radius) .& (.~ismissing.(table_confirmed[:koi_prad])), :] #to make additional cuts in planetary radii to be comparable to our simulated sample
-
-#To make cuts based on stellar properties of T_eff and logg:
-teff_confirmed = zeros(Int64, size(table_confirmed,1)) #list to be filled with the T_eff (K) for the objects
-logg_confirmed = zeros(Float64, size(table_confirmed,1)) #list to be filled with the logg(cgs) for the objects
-cdpp5_confirmed = zeros(Float64, size(table_confirmed,1)) #list to be filled with the RMS CDPP 5h values for the objects
-cdpp6_confirmed = zeros(Float64, size(table_confirmed,1)) #list to be filled with the RMS CDPP 6h values for the objects
-for (i,KepID) in enumerate(table_confirmed[:kepid])
-    teff_confirmed[i] = table_stellar[:teff][table_stellar[:kepid] .== KepID, :][1]
-    logg_confirmed[i] = table_stellar[:logg][table_stellar[:kepid] .== KepID, :][1]
-    cdpp5_confirmed[i] = table_stellar[:rrmscdpp05p0][table_stellar[:kepid] .== KepID, :][1]
-    cdpp6_confirmed[i] = table_stellar[:rrmscdpp06p0][table_stellar[:kepid] .== KepID, :][1]
-end
-
-cdpp_cut = 250.
-println("Fraction of CONFIRMED and CANDIDATE planets after CDPP cut: ", size(table_confirmed[(teff_confirmed .> 4000.) .& (teff_confirmed .< 7000.) .& (logg_confirmed .> 4.) .& (cdpp5_confirmed .< cdpp_cut), :], 1), "/", size(table_confirmed[(teff_confirmed .> 4000.) .& (teff_confirmed .< 7000.) .& (logg_confirmed .> 4.), :], 1))
-
-table_confirmed = table_confirmed[(teff_confirmed .> 4000.) .& (teff_confirmed .< 7000.) .& (logg_confirmed .> 4.) .& (cdpp5_confirmed .< cdpp_cut), :]
-=#
-
+Q1Q17_DR25 = CSV.read(joinpath(dirname(pathof(ExoplanetsSysSim)), "../data/q1_q17_dr25_koi.csv"), header=157, allowmissing=:all)
 
 #If using a stellar table with cuts already made and just matching kepids to get a koi catalog:
 
-stellar_catalog = setup_star_table_christiansen(sim_param)
-N_Kepler_targets = get_int(sim_param,"num_kepler_targets")
+#stellar_catalog_relaxcut = load("/Users/Matthias/.julia_new/dev/ExoplanetsSysSim/src/../data/q1q17_dr25_gaia_fgk_relaxcut.jld")
+#stellar_catalog = test["stellar_catalog"]
+
+#stellar_catalog = setup_star_table_christiansen(sim_param)
+stellar_catalog = ExoplanetsSysSim.StellarTable.setup_star_table(sim_param)
+
+#N_Kepler_targets = get_int(sim_param,"num_kepler_targets")
 
 table_confirmed = Q1Q17_DR25[(Q1Q17_DR25[:koi_disposition] .== "CONFIRMED") .| (Q1Q17_DR25[:koi_disposition] .== "CANDIDATE"), :] #Table containing only the confirmed and candidate objects
 

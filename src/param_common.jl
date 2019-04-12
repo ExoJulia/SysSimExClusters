@@ -9,8 +9,8 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     sim_param = SimParam()
 
     # How many targets to generate:
-    add_param_fixed(sim_param,"num_targets_sim_pass_one", 80006) # Note this is used for the number of stars in the simulations, not necessarily related to number of Kepler targets
-    add_param_fixed(sim_param,"num_kepler_targets", 6) # Note this is used for the number of Kepler targets for the observational catalog
+    add_param_fixed(sim_param,"num_targets_sim_pass_one", 139232) # Note this is used for the number of stars in the simulations, not necessarily related to number of Kepler targets
+    add_param_fixed(sim_param,"num_kepler_targets", 139232) # Note this is used for the number of Kepler targets for the observational catalog
 
     # For generating target star properties:
     add_param_fixed(sim_param,"generate_kepler_target", generate_kepler_target_from_table)
@@ -18,7 +18,8 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"star_table_setup", ExoplanetsSysSim.StellarTable.setup_star_table)
     #add_param_fixed(sim_param,"stellar_catalog", "q1_q17_dr25_stellar.jld") #"q1_q17_dr25_stellar.csv"
     #add_param_fixed(sim_param,"stellar_catalog", "q1q17_dr25_gaia_fgk.csv")
-    add_param_fixed(sim_param,"stellar_catalog", "q1q17_dr25_gaia_fgk.jld2")
+    #add_param_fixed(sim_param,"stellar_catalog", "q1q17_dr25_gaia_fgk.jld2")
+    add_param_fixed(sim_param,"stellar_catalog", "q1q17_dr25_gaia_fgk_relaxcut.jld2")
     #add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_simple) # An alternative that alternative can be used for testing if above breaks
     add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_from_table)
     add_param_fixed(sim_param,"window_function", "DR25topwinfuncs.jld2")
