@@ -363,12 +363,12 @@ function compute_weights_target_fitness_std_perfect_model(num_evals::Int64, use_
     return (active_param_true, weights, mean_weighted_dist, std_weighted_dist)
 end
 
-function compute_weights_target_fitness_std_from_file(file_name::String, use_KS_or_AD::String ; weight::Bool=true, dists_exclude::Vector{Int64}=Int64[], save_dist::Bool=true)
+function compute_weights_target_fitness_std_from_file(file_name::String, num_evals::Int64, use_KS_or_AD::String ; weight::Bool=true, dists_exclude::Vector{Int64}=Int64[], save_dist::Bool=true)
     t_elapsed = @elapsed begin
         active_param_true = make_vector_of_sim_param(sim_param)
         println("# True values: ", active_param_true)
 
-        dists_true = zeros(1000,17)
+        dists_true = zeros(num_evals,17)
         open(file_name) do f_weights
             eval_count = 1
             for (i,line) in enumerate(eachline(f_weights))
@@ -396,8 +396,8 @@ function compute_weights_target_fitness_std_from_file(file_name::String, use_KS_
         end
         weights[dists_exclude] .= 0. #to exclude certain distances from being used in the total distance function (but still computing and saving them during the optimization) by setting their weights to zero
 
-        weighted_dists_true = zeros(1000,length(weights))
-        for i in 1:1000
+        weighted_dists_true = zeros(num_evals,length(weights))
+        for i in 1:num_evals
             weighted_dists_true[i,:] = dists_true[i,:]  .* weights
         end
         mean_weighted_dists = transpose(mean(weighted_dists_true, dims=1))[:,] #array of mean weighted distances for each individual distance
@@ -405,7 +405,7 @@ function compute_weights_target_fitness_std_from_file(file_name::String, use_KS_
         std_weighted_dist = std(sum(weighted_dists_true, dims=2)) #std of weighted total distance
     end
 
-    println("# Using weights from pre-computed file:")
+    println("# Computing weights from pre-computed file: ", use_KS_or_AD)
     println("Mean dists: ", mean_dists)
     println("Rms dists: ", rms_dists)
     println("Weights (1/rms dists): ", weights)
@@ -414,7 +414,7 @@ function compute_weights_target_fitness_std_from_file(file_name::String, use_KS_
     println("Weighted distance using true values: ", mean_weighted_dist, " +/- ", std_weighted_dist)
     if save_dist
         println(f, "#")
-        println(f, "# Using weights from pre-computed file:")
+        println(f, "# Computing weights from pre-computed file: ", use_KS_or_AD)
         println(f, "Mean: ", mean_dists, [mean_dist])
         println(f, "Rms: ", rms_dists, [rms_dist])
         println(f, "Weights (1/rms dists): ", weights)
