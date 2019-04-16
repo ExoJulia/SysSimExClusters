@@ -9,7 +9,7 @@ sim_param = setup_sim_param_model()
 
 ##### To generate the underlying systems:
 
-add_param_fixed(sim_param,"num_targets_sim_pass_one", 139232)
+add_param_fixed(sim_param,"num_targets_sim_pass_one", 139232) # 139232
 @time cat_phys = generate_kepler_physical_catalog(sim_param)
 
 ##### For saving the underlying/true planets/systems:

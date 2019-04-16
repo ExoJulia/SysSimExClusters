@@ -307,10 +307,18 @@ function compute_weights_target_fitness_std_perfect_model(num_evals::Int64, use_
             println(f, "# Format: Dist: [distances][total distance]")
         end
 
-        dists_true = zeros(num_evals,17)
-        for i in 1:num_evals
-            dists_true[i,:] = target_function(active_param_true, use_KS_or_AD, "Sim"; AD_mod=AD_mod, all_dist=true, save_dist=save_dist)
+        if nprocs() == 1
+            dists_true = zeros(num_evals,17)
+            for i in 1:num_evals
+                dists_true[i,:] = target_function(active_param_true, use_KS_or_AD, "Sim"; AD_mod=AD_mod, all_dist=true, save_dist=save_dist)
+            end
+        else # if nprocs() > 1
+            dists_true = SharedArray{Float64,2}(num_evals,17)
+            @sync @distributed for i in 1:num_evals
+                dists_true[i,:] = target_function(active_param_true, use_KS_or_AD, "Sim"; AD_mod=AD_mod, all_dist=true, save_dist=save_dist)
+            end
         end
+
         mean_dists = transpose(mean(dists_true, dims=1))[:,] #array of mean distances for each individual distance
         mean_dist = mean(sum(dists_true, dims=2)) #mean total distance
         #std_dists = transpose(std(dists_true, 1))[:,] #array of std distances for each individual distance

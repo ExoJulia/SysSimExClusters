@@ -13,7 +13,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"num_kepler_targets", 139232) # Note this is used for the number of Kepler targets for the observational catalog
 
     # For generating target star properties:
-    add_param_fixed(sim_param,"generate_kepler_target", generate_kepler_target_from_table)
+    #add_param_fixed(sim_param,"generate_kepler_target", generate_kepler_target_from_table)
     #add_param_fixed(sim_param,"star_table_setup", setup_star_table_christiansen)
     add_param_fixed(sim_param,"star_table_setup", ExoplanetsSysSim.StellarTable.setup_star_table)
     #add_param_fixed(sim_param,"stellar_catalog", "q1_q17_dr25_stellar.jld") #"q1_q17_dr25_stellar.csv"
@@ -24,22 +24,22 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_from_table)
     add_param_fixed(sim_param,"window_function", "DR25topwinfuncs.jld2")
     add_param_fixed(sim_param,"osd_file","dr25fgk_small_osds.jld2")
-    #add_param_fixed(sim_param,"osd_file","dr25fgk_relaxcut_osds.jld2")
+    #add_param_fixed(sim_param,"osd_file","dr25fgk_relaxcut_osds.jld2") # WARNING: need 8gb of memory to read this file
 
     # For generating planetary system properties:
     add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered) # For Non-clustered model: "generate_planetary_system_non_clustered"
 
     add_param_fixed(sim_param,"generate_num_clusters", generate_num_clusters_poisson)
     add_param_fixed(sim_param,"generate_num_planets_in_cluster", generate_num_planets_in_cluster_poisson)
-    add_param_active(sim_param,"log_rate_clusters", log(0.9))
+    add_param_active(sim_param,"log_rate_clusters", log(1.))
     add_param_fixed(sim_param,"max_clusters_in_sys", 10)
-    add_param_active(sim_param,"log_rate_planets_per_cluster", log(1.9))
+    add_param_active(sim_param,"log_rate_planets_per_cluster", log(2.))
     add_param_fixed(sim_param,"max_planets_in_cluster", 10)
 
     # Generate_num_planets_in_cluster currently calls:
     add_param_fixed(sim_param,"generate_periods", ExoplanetsSysSim.generate_periods_power_law)
     add_param_fixed(sim_param,"generate_sizes", ExoplanetsSysSim.generate_sizes_broken_power_law) # To choose the way we draw planetary radii; if "generate_sizes_power_law", then takes "power_law_r"; if "generate_sizes_broken_power_law", then takes "power_law_r1", "power_law_r2", and "break_radius"
-    add_param_active(sim_param,"power_law_P", -0.5)
+    add_param_active(sim_param,"power_law_P", -0.25)
     #add_param_fixed(sim_param,"power_law_r", -2.5)
     add_param_active(sim_param,"power_law_r1", -1.)
     add_param_active(sim_param,"power_law_r2", -4.)
@@ -53,7 +53,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"resonance_width", 0.05)
     add_param_fixed(sim_param,"period_ratios_mmr", [2.0, 1.5, 4/3, 5/4])
     add_param_active(sim_param,"f_high_incl", 0.5) # fraction of systems with higher mutual inclinations
-    add_param_active(sim_param,"sigma_incl", 8.) # degrees; 0 = coplanar w/ generate_kepler_target_simple; ignored by generate_planetary_system_uncorrelated_incl
+    add_param_active(sim_param,"sigma_incl", 10.) # degrees; 0 = coplanar w/ generate_kepler_target_simple; ignored by generate_planetary_system_uncorrelated_incl
     add_param_active(sim_param,"sigma_incl_near_mmr", 1.)
 
     add_param_fixed(sim_param,"max_incl_sys", 0.0) #degrees; gives system inclinations from "max_incl_sys" (deg) to 90 (deg), so set to 0 for isotropic distribution of system inclinations; NOTE: make sure the difference between this and 90 (deg) is at least greater than "sigma_incl" and "sigma_incl_near_mmr"!
