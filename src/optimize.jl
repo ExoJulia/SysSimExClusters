@@ -1,5 +1,3 @@
-import DataFrames.skipmissing
-
 include("clusters.jl")
 include("planetary_catalog.jl")
 include("optimization.jl")
@@ -13,17 +11,17 @@ sim_param = setup_sim_param_model()
 ##### To start saving the model iterations in the optimization into a file:
 
 model_name = "Clustered_P_R_broken_R_optimization"
-optimization_number = "_random"*ARGS[1] #if want to run on the cluster with random initial active parameters: "_random"*ARGS[1]
-use_KS_or_AD = "KS" #'KS' or 'AD' or 'Both' (need to be careful counting indices for 'dists_exclude'!!!)
+optimization_number = "_random"*ARGS[1] # if want to run on the cluster with random initial active parameters: "_random"*ARGS[1]
+use_KS_or_AD = "KS" # 'KS' or 'AD' or 'Both' (need to be careful counting indices for 'dists_exclude'!!!)
 AD_mod = true
-Kep_or_Sim = "Kep" #'Kep' or 'Sim'
-num_targs = 200015
-max_evals = 5000
-num_evals_weights = 20
-dists_exclude = [3,4,9,10,12,13,15,16,17] #Int64[] if want to include all distances
+Kep_or_Sim = "Kep" # 'Kep' or 'Sim'
+num_targs = 100000 # 139232*5
+max_incl_sys = 0.
+max_evals = 20
+dists_exclude = [2,4,8,12,13,15,16,17] # Int64[] if want to include all distances
 Pop_per_param = 4
 
-file_name = model_name*optimization_number*"_targs"*string(num_targs)*"_evals"*string(max_evals)*".txt"
+file_name = model_name*optimization_number*"_targs$(num_targs)_evals$(max_evals).txt"
 f = open(file_name, "w")
 println(f, "# All initial parameters:")
 write_model_params(f, sim_param)
@@ -35,21 +33,19 @@ write_model_params(f, sim_param)
 ##### To run the same model multiple times to see how it compares to a simulated catalog with the same parameters:
 
 using Random
-Random.seed!(1234) #to have the same reference catalog and simulated catalogs for calculating the weights
+Random.seed!(1234) # to have the same reference catalog and simulated catalogs for calculating the weights
 
-#To generate a simulated catalog to fit to:
+# To generate a simulated catalog to fit to:
 cat_phys = generate_kepler_physical_catalog(sim_param)
 cat_phys_cut = ExoplanetsSysSim.generate_obs_targets(cat_phys,sim_param)
 cat_obs = observe_kepler_targets_single_obs(cat_phys_cut,sim_param)
 summary_stat_ref = calc_summary_stats_model(cat_obs,sim_param)
 
-#To simulate more observed planets for the subsequent model generations:
+# To simulate more observed planets for the subsequent model generations:
 add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
-add_param_fixed(sim_param,"max_incl_sys", 60.0) #degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
+add_param_fixed(sim_param,"max_incl_sys", max_incl_sys) # degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
 
-#active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_perfect_model(num_evals_weights, use_KS_or_AD ; AD_mod=AD_mod, weight=true, dists_exclude=dists_exclude, save_dist=true)
-
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Weights1000_targs200015_maxincl60.txt", use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_broken_R_weights_ADmod_true_targs696160_evals1000.txt", use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
 
 
 
@@ -59,13 +55,13 @@ active_param_true, weights, target_fitness, target_fitness_std = compute_weights
 
 transformed_indices = [8,9]
 active_param_keys = ["f_high_incl", "log_rate_clusters", "log_rate_planets_per_cluster", "power_law_P", "power_law_r1", "power_law_r2", "sigma_hk", "sigma_incl", "sigma_incl_near_mmr", "sigma_log_radius_in_cluster", "sigma_logperiod_per_pl_in_cluster"]
-    #["break_radius", "f_high_incl", "log_rate_clusters", "log_rate_planets_per_cluster", "mr_power_index", "num_mutual_hill_radii", "power_law_P", "power_law_r1", "power_law_r2", "sigma_hk", "sigma_incl", "sigma_incl_near_mmr", "sigma_log_radius_in_cluster", "sigma_logperiod_per_pl_in_cluster"]
+    # ["break_radius", "f_high_incl", "log_rate_clusters", "log_rate_planets_per_cluster", "mr_power_index", "num_mutual_hill_radii", "power_law_P", "power_law_r1", "power_law_r2", "sigma_hk", "sigma_incl", "sigma_incl_near_mmr", "sigma_log_radius_in_cluster", "sigma_logperiod_per_pl_in_cluster"]
 active_params_box = [(0., 1.), (log(0.5), log(5.)), (log(0.5), log(5.)), (-2., 1.), (-6., 0.), (-6., 0.), (0., 0.1), (0., 1.), (0., 1.), (0., 0.5), (0., 0.3)] #search ranges for all of the active parameters
-transformed_triangle = [[0., 0.], [10., 10.], [10., 0.]] #vertices (x,y) of the triangle for the transformed params
+transformed_triangle = [[0., 0.], [90., 90.], [90., 0.]] # vertices (x,y) of the triangle for the transformed params
 
-#To randomly draw (uniformly) a value for each active model parameter within its search range:
+# To randomly draw (uniformly) a value for each active model parameter within its search range:
 
-Random.seed!() #to have a random set of initial parameters and optimization run
+Random.seed!() # to have a random set of initial parameters and optimization run
 
 for (i,param_key) in enumerate(active_param_keys)
     if ~in(i,transformed_indices)
@@ -101,7 +97,7 @@ println(f, "# AD_mod: ", AD_mod)
 println(f, "#")
 
 #target_function(active_param_start, use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true) #to simulate the model once with the drawn parameters before starting the optimization
-target_function_transformed_params(active_param_transformed_start, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true) #to simulate the model once with the drawn parameters before starting the optimization
+target_function_transformed_params(active_param_transformed_start, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true) # to simulate the model once with the drawn parameters before starting the optimization
 
 
 
