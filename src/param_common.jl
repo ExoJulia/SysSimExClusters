@@ -31,15 +31,15 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
 
     add_param_fixed(sim_param,"generate_num_clusters", generate_num_clusters_poisson)
     add_param_fixed(sim_param,"generate_num_planets_in_cluster", generate_num_planets_in_cluster_poisson)
-    add_param_active(sim_param,"log_rate_clusters", log(1.))
+    add_param_active(sim_param,"log_rate_clusters", log(1.5))
     add_param_fixed(sim_param,"max_clusters_in_sys", 10)
-    add_param_active(sim_param,"log_rate_planets_per_cluster", log(2.))
+    add_param_active(sim_param,"log_rate_planets_per_cluster", log(2.3))
     add_param_fixed(sim_param,"max_planets_in_cluster", 10)
 
     # Generate_num_planets_in_cluster currently calls:
     add_param_fixed(sim_param,"generate_periods", ExoplanetsSysSim.generate_periods_power_law)
     add_param_fixed(sim_param,"generate_sizes", ExoplanetsSysSim.generate_sizes_broken_power_law) # To choose the way we draw planetary radii; if "generate_sizes_power_law", then takes "power_law_r"; if "generate_sizes_broken_power_law", then takes "power_law_r1", "power_law_r2", and "break_radius"
-    add_param_active(sim_param,"power_law_P", -0.25)
+    add_param_active(sim_param,"power_law_P", 0.5)
     #add_param_fixed(sim_param,"power_law_r", -2.5)
     add_param_active(sim_param,"power_law_r1", -1.)
     add_param_active(sim_param,"power_law_r2", -4.)
@@ -47,7 +47,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"max_period", 300.0)
     add_param_fixed(sim_param,"min_radius", 0.5*ExoplanetsSysSim.earth_radius)
     add_param_fixed(sim_param,"max_radius", 10.0*ExoplanetsSysSim.earth_radius)
-    add_param_fixed(sim_param,"break_radius", 3.0*ExoplanetsSysSim.earth_radius)
+    add_param_fixed(sim_param,"break_radius", 2.0*ExoplanetsSysSim.earth_radius)
 
     # Generate_num_planets_in_cluster currently use these for the inclination distribution:
     add_param_fixed(sim_param,"resonance_width", 0.05)

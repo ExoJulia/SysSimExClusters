@@ -27,7 +27,7 @@ dists_exclude = Int64[] # [2,4,8,12,13,15,16,17] # Int64[] if want to include al
 
 file_name = "Clustered_P_R_broken_R_weights_ADmod_$(AD_mod)_targs$(num_targs)_evals$(num_evals_weights)"
 
-sendto(workers(), num_targs=num_targs, file_name=file_name)
+sendto(workers(), num_targs=num_targs, max_incl_sys=max_incl_sys, file_name=file_name)
 
 @everywhere f = open(file_name*"_worker"*string(myid())*".txt", "w")
 println(f, "# All initial parameters:")
