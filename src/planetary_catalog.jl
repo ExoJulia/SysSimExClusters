@@ -37,7 +37,7 @@ function keep_planet_candidates_given_sim_param(planet_catalog::DataFrame; sim_p
     planets_keep = planets_keep[in_stellar_catalog_indices, :]
     println("After removing planets not around stars in stellar catalog: ", size(planets_keep, 1))
 
-    planets_keep = planets_keep[(ismissing.(planets_keep[:koi_duration]) .== false) .& (planets_keep[:koi_duration] .> 0), :]
+    planets_keep = planets_keep[(ismissing.(planets_keep[:koi_duration]) .== false) .& (planets_keep[:koi_duration] .>= 0), :]
     planets_keep = planets_keep[(ismissing.(planets_keep[:koi_depth]) .== false) .& (planets_keep[:koi_depth] .> 0), :]
     println("After removing planets with missing or negative transit durations or depths: ", size(planets_keep, 1))
 

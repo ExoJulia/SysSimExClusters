@@ -1,3 +1,4 @@
+using Distributed # just to compile a function in optimization.jl
 include("clusters.jl")
 include("planetary_catalog.jl")
 include("optimization.jl")
@@ -13,12 +14,12 @@ sim_param = setup_sim_param_model()
 model_name = "Clustered_P_R_broken_R_optimization"
 optimization_number = "_random"*ARGS[1] # if want to run on the cluster with random initial active parameters: "_random"*ARGS[1]
 use_KS_or_AD = "KS" # 'KS' or 'AD' or 'Both' (need to be careful counting indices for 'dists_exclude'!!!)
-AD_mod = true
+AD_mod = false
 Kep_or_Sim = "Kep" # 'Kep' or 'Sim'
-num_targs = 100000 # 139232*5
+num_targs = 139232*5
 max_incl_sys = 0.
-max_evals = 20
-dists_exclude = [2,4,8,12,13,15,16,17] # Int64[] if want to include all distances
+max_evals = 5000
+dists_exclude = [2,3,8,12,13,15,16,17] # Int64[] if want to include all distances
 Pop_per_param = 4
 
 file_name = model_name*optimization_number*"_targs$(num_targs)_evals$(max_evals).txt"
@@ -45,7 +46,7 @@ summary_stat_ref = calc_summary_stats_model(cat_obs,sim_param)
 add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
 add_param_fixed(sim_param,"max_incl_sys", max_incl_sys) # degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
 
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_broken_R_weights_ADmod_true_targs696160_evals1000.txt", use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_broken_R_weights_ADmod_true_targs696160_evals1000.txt", 1000, use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
 
 
 

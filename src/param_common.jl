@@ -67,9 +67,6 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     # Generate_num_planets_in_cluster currently use these for the stability tests:
     add_param_fixed(sim_param,"num_mutual_hill_radii", 8.0)
     add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table) # "ExoplanetsSysSim.generate_planet_mass_from_radius_powerlaw" or "generate_planet_mass_from_radius_Ning2018" or "generate_planet_mass_from_radius_Ning2018_table"
-    #add_param_fixed(sim_param,"mr_power_index", 2.0)
-    #add_param_fixed(sim_param,"mr_const", 1.0)
-    #add_param_fixed(sim_param,"mr_max_mass", 1e3*ExoplanetsSysSim.earth_mass)
     add_param_active(sim_param,"sigma_log_radius_in_cluster", 0.25)
     add_param_active(sim_param,"sigma_logperiod_per_pl_in_cluster", 0.15)
 

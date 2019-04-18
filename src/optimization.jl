@@ -177,7 +177,7 @@ function calc_distance_Kepler(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, re
     max_incl_sys = get_real(sim_param,"max_incl_sys")
     cos_factor = cos(max_incl_sys*pi/180) #factor to divide the number of targets in simulation by to get the actual number of targets needed (with an isotropic distribution of system inclinations) to produce as many transiting systems for a single observer
 
-    delta_f = abs(ss1.stat["num_tranets"]/(ss1.stat["num targets"]/cos_factor) - length(P_confirmed)/N_Kepler_targets)
+    delta_f = abs(ss1.stat["num_tranets"]/(ss1.stat["num targets"]/cos_factor) - length(P_confirmed)/get_int(sim_param,"num_kepler_targets"))
     d_mult_KS = ksstats_ints(M_cat_obs, M_confirmed)[5]
     d_mult_CRPD = CRPDstats([Nmult_obs[1:4]; sum(Nmult_obs[5:end])], [Nmult_confirmed[1:4]; sum(Nmult_confirmed[5:end])])
     d_mult_CRPD_switched = CRPDstats([Nmult_confirmed[1:4]; sum(Nmult_confirmed[5:end])], [Nmult_obs[1:4]; sum(Nmult_obs[5:end])])
