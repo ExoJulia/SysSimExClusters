@@ -46,7 +46,7 @@ summary_stat_ref = calc_summary_stats_model(cat_obs,sim_param)
 add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
 add_param_fixed(sim_param,"max_incl_sys", max_incl_sys) # degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
 
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_broken_R_weights_ADmod_true_targs696160_evals1000.txt", 1000, use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_broken_R_weights_ADmod_$(AD_mod)_targs696160_evals1000.txt", 1000, use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
 
 
 

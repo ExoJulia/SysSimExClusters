@@ -5,15 +5,15 @@ function write_pbs_settings(f)
     println(f, "#!/bin/tcsh")
     println(f, "#PBS -A ebf11_a_g_sc_default")
     println(f, "#PBS -l nodes=1:ppn=1")
-    println(f, "#PBS -l walltime=48:00:00")
-    println(f, "#PBS -l pmem=8gb")
+    println(f, "#PBS -l walltime=192:00:00")
+    println(f, "#PBS -l pmem=16gb")
     println(f, "#PBS -j oe")
     #println(f, "#PBS -m abe")
     #println(f, "#PBS -M myh7@psu.edu")
     println(f, "")
     println(f, "cd \$PBS_O_WORKDIR")
     println(f, "")
-    println(f, "setenv JULIA_DEPOT_PATH /gpfs/group/ebf11/default/myh7/julia_pkgdir/") # Point to where we installed things for Julia and are developing ExoplanetsSysSim
+    println(f, "setenv JULIA_DEPOT_PATH /gpfs/group/ebf11/default/myh7/julia_new/") # Point to where we installed things for Julia and are developing ExoplanetsSysSim
 end
 
 """
@@ -120,9 +120,9 @@ end
 
 ##### To actually write a number of PBS scripts and submit them:
 
-n_jobs = 20 # total number of jobs to submit
+n_jobs = 50 # total number of jobs to submit
 
-#submit_jobs_optimize(n_jobs)
+submit_jobs_optimize(n_jobs)
 #submit_jobs_compute_distances_given_params_random(n_jobs)
 #submit_jobs_compute_distances_given_params_parallel(1)
 #submit_jobs_GP_draw_points_parallel(1)

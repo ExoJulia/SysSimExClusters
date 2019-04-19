@@ -1,9 +1,3 @@
-import DataFrames.skipmissing
-
-
-
-
-
 ##### To define functions for calculating the distances:
 
 function calc_distance(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, ss2::ExoplanetsSysSim.CatalogSummaryStatistics, return_KS_or_AD::String ; AD_mod::Bool=false, all_dist::Bool=false, save_dist::Bool=true)

@@ -23,8 +23,8 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     #add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_simple) # An alternative that alternative can be used for testing if above breaks
     add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_from_table)
     add_param_fixed(sim_param,"window_function", "DR25topwinfuncs.jld2")
-    add_param_fixed(sim_param,"osd_file","dr25fgk_small_osds.jld2")
-    #add_param_fixed(sim_param,"osd_file","dr25fgk_relaxcut_osds.jld2") # WARNING: need 8gb of memory to read this file
+    #add_param_fixed(sim_param,"osd_file","dr25fgk_small_osds.jld2")
+    add_param_fixed(sim_param,"osd_file","dr25fgk_relaxcut_osds.jld2") # WARNING: need 8gb of memory to read this file
 
     # For generating planetary system properties:
     add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered) # For Non-clustered model: "generate_planetary_system_non_clustered"
@@ -33,7 +33,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"generate_num_planets_in_cluster", generate_num_planets_in_cluster_poisson)
     add_param_active(sim_param,"log_rate_clusters", log(1.5))
     add_param_fixed(sim_param,"max_clusters_in_sys", 10)
-    add_param_active(sim_param,"log_rate_planets_per_cluster", log(2.3))
+    add_param_active(sim_param,"log_rate_planets_per_cluster", log(1.8))
     add_param_fixed(sim_param,"max_planets_in_cluster", 10)
 
     # Generate_num_planets_in_cluster currently calls:
