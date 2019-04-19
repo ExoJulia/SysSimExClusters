@@ -109,7 +109,7 @@ function ADstats(x::AbstractVector{T}, y::AbstractVector{S}) where {T <: Real, S
     M_i_diffs = [ones(n); zeros(m)][sort_idx]
     M_i_array = cumsum(M_i_diffs)[1:end-1] #array of M_i except for last element, i.e. from i=1 to i=N-1
     i_array = 1:(N-1) #array of i from i=1 to i=N-1
-    AD_dist = (1/(n*m))*sum(((M_i_array*N - n*i_array).^2)./(i_array.*(N - i_array))) #AD distance
+    AD_dist = (1/(n*m))*sum(((M_i_array*N .- n*i_array).^2)./(i_array.*(N .- i_array))) #AD distance
     return AD_dist
 end
 
