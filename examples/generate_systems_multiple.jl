@@ -3,8 +3,8 @@ dir_path = dirname(@__FILE__)
 include(joinpath(dir_path, "../src/clusters.jl"))
 
 sim_param = setup_sim_param_model()
-add_param_fixed(sim_param,"num_targets_sim_pass_one", 139232)
-add_param_fixed(sim_param,"max_incl_sys", 80.0) #degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
+add_param_fixed(sim_param,"num_targets_sim_pass_one", 139232*5)
+add_param_fixed(sim_param,"max_incl_sys", 0.) #degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
 
 
 
@@ -24,7 +24,7 @@ active_params_names = names(active_params_best_all)[2:end]
 
 ##### To simulate a catalog for each set of best active parameters:
 
-for num_cat in 1:size(active_params_best_all)[1] #1:size(active_params_best_all)[1]
+for num_cat in 1:10 #1:size(active_params_best_all)[1]
     println("Generating simulated catalog ", num_cat)
     tic()
 
