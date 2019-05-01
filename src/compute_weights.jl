@@ -74,7 +74,7 @@ open(file_name_combined, "a") do f
     end
 end
 
-f = open("Weights_KS_AD_temp.txt", "a")
+f = open("Weights_KS_AD_temp.txt", "w")
 compute_weights_target_fitness_std_from_file(file_name_combined, num_evals_weights, "KS" ; weight=true, dists_exclude=dists_exclude, save_dist=true)
 compute_weights_target_fitness_std_from_file(file_name_combined, num_evals_weights, "AD" ; weight=true, dists_exclude=dists_exclude, save_dist=true)
 close(f)

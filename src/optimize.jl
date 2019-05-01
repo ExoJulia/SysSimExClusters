@@ -1,4 +1,3 @@
-using Distributed # just to compile a function in optimization.jl
 include("clusters.jl")
 include("planetary_catalog.jl")
 include("optimization.jl")

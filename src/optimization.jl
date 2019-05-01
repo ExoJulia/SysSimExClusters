@@ -1,3 +1,5 @@
+using Distributed # just to compile a function
+
 ##### To define functions for calculating the distances:
 
 function calc_distance(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, ss2::ExoplanetsSysSim.CatalogSummaryStatistics, return_KS_or_AD::String ; AD_mod::Bool=false, all_dist::Bool=false, save_dist::Bool=true)
@@ -402,7 +404,7 @@ function compute_weights_target_fitness_std_from_file(file_name::String, num_eva
     println("# Computing weights from pre-computed file: ", use_KS_or_AD)
     println("Mean dists: ", mean_dists)
     println("Rms dists: ", rms_dists)
-    println("Weights (1/rms dists): ", weights)
+    println("Weights_$(use_KS_or_AD): ", weights)
     println("Mean weighted dists: ", mean_weighted_dists)
     println("Distance using true values: ", mean_dist, " +/- ", std_dist)
     println("Weighted distance using true values: ", mean_weighted_dist, " +/- ", std_weighted_dist)
@@ -411,7 +413,7 @@ function compute_weights_target_fitness_std_from_file(file_name::String, num_eva
         println(f, "# Computing weights from pre-computed file: ", use_KS_or_AD)
         println(f, "Mean: ", mean_dists, [mean_dist])
         println(f, "Rms: ", rms_dists, [rms_dist])
-        println(f, "Weights (1/rms dists): ", weights)
+        println(f, "Weights_$(use_KS_or_AD): ", weights)
         println(f, "Mean weighted dists: ", mean_weighted_dists, [mean_weighted_dist])
         println(f, "# Distance using true values (default parameter values): ", mean_dist, " +/- ", std_dist)
         println(f, "# Weighted distance using true values (default parameter values): ", mean_weighted_dist, " +/- ", std_weighted_dist)

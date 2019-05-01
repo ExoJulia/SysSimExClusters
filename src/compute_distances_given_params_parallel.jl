@@ -1,13 +1,10 @@
 #Pkg.add("ParallelDataTransfer")
 using Distributed
 
-addprocs(5) #number of additional processors
+addprocs(2) #number of additional processors
 
 @everywhere using ParallelDataTransfer
 @everywhere using ExoplanetsSysSim
-
-import DataFrames.skipmissing
-
 @everywhere include("clusters.jl")
 @everywhere include("planetary_catalog.jl")
 @everywhere include("optimization.jl")
@@ -24,19 +21,20 @@ model_name = "Clustered_P_R_broken_R"
 use_KS_or_AD = "KS" #'KS' or 'AD' or 'Both' (need to be careful counting indices for 'dists_exclude'!!!)
 AD_mod = true
 Kep_or_Sim = "Kep" #'Kep' or 'Sim'
-num_targs = 400030
-dists_exclude = [3,4,8,12,13,15,16,17] #Int64[] if want to include all distances
+num_targs = 100000 #139232*5
+max_incl_sys = 0.
+dists_exclude = [2,3,8,12,13,15,16,17] #Int64[] if want to include all distances
 
-data_table = CSV.read("Active_params_distances_table_best100000_every10.txt", delim=" ", allowmissing=:none)
+data_table = CSV.read("../emulator/GP_files/Active_params_distances_table_best100000_every10.txt", delim=" ", allowmissing=:none)
 n_params = length(make_vector_of_active_param_keys(sim_param))
 params_keys = names(data_table)[1:n_params]
 @assert all(make_vector_of_active_param_keys(sim_param) .== String.(params_keys))
 
 params_array = convert(Matrix, data_table[1:end, params_keys])
 
-file_name = model_name*"_recompute_optim_best100000_every10_targs"*string(num_targs)*".txt"
+file_name = model_name*"_recompute_optim_best100000_every10_targs$(num_targs).txt"
 
-sendto(workers(), num_targs=num_targs, file_name=file_name)
+sendto(workers(), num_targs=num_targs, max_incl_sys=max_incl_sys, file_name=file_name)
 
 @everywhere f = open(file_name*"_worker"*string(myid())*".txt", "w")
 println(f, "# All initial parameters:")
@@ -61,9 +59,9 @@ summary_stat_ref = calc_summary_stats_model(cat_obs,sim_param)
 
 #To simulate more observed planets for the subsequent model generations:
 @everywhere add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
-@everywhere add_param_fixed(sim_param,"max_incl_sys", 0.0) #degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
+@everywhere add_param_fixed(sim_param,"max_incl_sys", max_incl_sys) #degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
 
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Weights1000_targs200015_maxincl60.txt", use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_broken_R_weights_ADmod_$(AD_mod)_targs696160_evals1000.txt", 1000, use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
 
 
 
@@ -82,7 +80,7 @@ println(f, "#")
 Random.seed!()
 
 t_elapsed = @elapsed begin
-    @sync @distributed for i in 1:size(params_array,1)
+    @sync @distributed for i in 1:10 #1:size(params_array,1)
         target_function(params_array[i,:], use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true)
     end
 end
