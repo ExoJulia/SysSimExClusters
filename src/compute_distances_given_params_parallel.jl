@@ -21,7 +21,7 @@ model_name = "Clustered_P_R_broken_R"
 use_KS_or_AD = "KS" #'KS' or 'AD' or 'Both' (need to be careful counting indices for 'dists_exclude'!!!)
 AD_mod = true
 Kep_or_Sim = "Kep" #'Kep' or 'Sim'
-num_targs = 100000 #139232*5
+num_targs = 139232*5
 max_incl_sys = 0.
 dists_exclude = [2,3,8,12,13,15,16,17] #Int64[] if want to include all distances
 
@@ -80,7 +80,7 @@ println(f, "#")
 Random.seed!()
 
 t_elapsed = @elapsed begin
-    @sync @distributed for i in 1:10 #1:size(params_array,1)
+    @sync @distributed for i in 1:size(params_array,1)
         target_function(params_array[i,:], use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true)
     end
 end
