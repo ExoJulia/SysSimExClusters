@@ -58,8 +58,8 @@ end
 @time planets_cleaned = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog, recompute_radii=true)
 
 # If we want to write the cleaned planetary catalog and the stellar catalog to a csv file, keeping only the columns we need:
-#CSV.write("q1_q17_dr25_gaia_fgk_relaxcut_koi_cleaned.csv", planets_cleaned[[:kepid, :kepoi_name, :koi_disposition, :koi_pdisposition, :koi_score, :koi_period, :koi_duration, :koi_depth, :koi_prad, :koi_srad]])
-#CSV.write("q1_q17_dr25_gaia_fgk_relaxcut_cleaned.csv", stellar_catalog[[:kepid, :mass, :radius]])
+#CSV.write("q1_q17_dr25_gaia_fgk_koi_cleaned.csv", planets_cleaned[[:kepid, :kepoi_name, :koi_disposition, :koi_pdisposition, :koi_score, :koi_period, :koi_duration, :koi_depth, :koi_prad, :koi_srad]])
+#CSV.write("q1_q17_dr25_gaia_fgk_cleaned.csv", stellar_catalog[[:kepid, :mass, :radius]])
 
 
 

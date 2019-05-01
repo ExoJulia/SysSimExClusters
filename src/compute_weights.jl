@@ -20,7 +20,7 @@ addprocs(10) # number of additional processors
 ##### To start saving the model iterations in the optimization into a file:
 
 AD_mod = true
-num_targs = 139232*5
+num_targs = 79935*5
 max_incl_sys = 0.
 num_evals_weights = 1000
 dists_exclude = Int64[] # [2,4,8,12,13,15,16,17] # Int64[] if want to include all distances in weighted sum; all distances are saved regardless
