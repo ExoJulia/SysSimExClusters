@@ -247,14 +247,16 @@ end
 """
 Evaluates 'predict_model_from_uniform_prior_until_accept_point' until 'n_accept' total points are accepted (in series).
 """
-function predict_model_from_uniform_prior_until_accept_n_points(params_names::Array{Symbol,1}, xdata::Array{Float64,2}, ydata::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, ydata_err::Vector{Float64}, n_accept::Int64; max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf)
+function predict_model_from_uniform_prior_until_accept_n_points(params_names::Array{Symbol,1}, xdata::Array{Float64,2}, ydata::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, ydata_err::Vector{Float64}, n_accept::Int64; prior_bounds::Union{Array{Tuple{Float64,Float64},1}, Nothing}=nothing, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf)
     @assert size(xdata, 2) == length(params_names)
     @assert size(xdata, 1) == length(ydata) == length(ydata_err)
     @assert n_accept > 0
     dims = length(params_names)
 
-    xtrain_mins, xtrain_maxs = findmin(xdata, dims=1)[1], findmax(xdata, dims=1)[1]
-    prior_bounds = [(xtrain_mins[i], xtrain_maxs[i]) for i in 1:dims] # To prevent predicting "outside" of the n-dim box of training points
+    if prior_bounds == nothing
+        xtrain_mins, xtrain_maxs = findmin(xdata, dims=1)[1], findmax(xdata, dims=1)[1]
+        prior_bounds = [(xtrain_mins[i], xtrain_maxs[i]) for i in 1:dims] # To prevent predicting "outside" of the n-dim box of training points
+    end
 
     L = compute_kernel_given_data(xdata, kernel, hparams; ydata_err=ydata_err)
 
@@ -277,15 +279,17 @@ end
 """
 Evaluates 'predict_model_from_uniform_prior_until_accept_point' until 'n_accept' total points are accepted (in parallel).
 """
-function predict_model_from_uniform_prior_until_accept_n_points_parallel(params_names::Array{Symbol,1}, xdata::Array{Float64,2}, ydata::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, ydata_err::Vector{Float64}, n_accept::Int64; n_batch::Int64=n_accept, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf)
+function predict_model_from_uniform_prior_until_accept_n_points_parallel(params_names::Array{Symbol,1}, xdata::Array{Float64,2}, ydata::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, ydata_err::Vector{Float64}, n_accept::Int64; prior_bounds::Union{Array{Tuple{Float64,Float64},1}, Nothing}=nothing, n_batch::Int64=n_accept, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf)
     @assert size(xdata, 2) == length(params_names)
     @assert size(xdata, 1) == length(ydata) == length(ydata_err)
     @assert rem(n_accept, n_batch) == 0 # 'n_batch' is the number of batches, NOT the number of points per batch
     dims = length(params_names)
     n_per_batch = div(n_accept, n_batch)
 
-    xtrain_mins, xtrain_maxs = findmin(xdata, dims=1)[1], findmax(xdata, dims=1)[1]
-    prior_bounds = [(xtrain_mins[i], xtrain_maxs[i]) for i in 1:dims] # To prevent predicting "outside" of the n-dim box of training points
+    if prior_bounds == nothing
+        xtrain_mins, xtrain_maxs = findmin(xdata, dims=1)[1], findmax(xdata, dims=1)[1]
+        prior_bounds = [(xtrain_mins[i], xtrain_maxs[i]) for i in 1:dims] # To prevent predicting "outside" of the n-dim box of training points
+    end
 
     L = compute_kernel_given_data(xdata, kernel, hparams; ydata_err=ydata_err)
 
@@ -320,7 +324,9 @@ function log_marginal_likelihood(xdata::Array{Float64,2}, ydata::Vector{Float64}
     K_y = K_f + var_I
     L = transpose(cholesky(K_y).U)
 
-    return -(1/2)*transpose(L \ ydata)*(L \ ydata) - logdet(transpose(L)) - (length(ydata)/2)*log(2*pi) # Note: det(L) == det(transpose(L)) in general
+    log_p = -(1/2)*transpose(L \ ydata)*(L \ ydata) - logdet(transpose(L)) - (length(ydata)/2)*log(2*pi) # Note: det(L) == det(transpose(L)) in general
+    println("log_p = $log_p")
+    return log_p
 end
 
 """
@@ -346,6 +352,40 @@ function optimize_hparams_with_MLE(hparams_guess::Vector{Float64}, xdata::Array{
     result = result2
     hparams_best = Optim.minimizer(result)
     log_p_best = -Optim.minimum(result)
+    return hparams_best, log_p_best
+end
+
+"""
+Optimize the length scale hyperparameters ('lscales') of the squared exponential kernel using maximum likelihood estimation, given a fixed value for the 'sigma_f' hyperparameter, a training dataset, and an initial guess for the hyperparameters.
+"""
+function optimize_hparams_SE_ndims_fixed_sigmaf_with_MLE(lscales_guess::Vector{Float64}, xdata::Array{Float64,2}, ydata::Vector{Float64}; ydata_err::Vector{Float64}=zeros(length(ydata)), sigma_f::Float64=1., lscales_lower::Vector{Float64}=ones(length(lscales_guess)).*1e-2, lscales_upper::Vector{Float64}=ones(length(lscales_guess)).*1e2)
+    @assert size(xdata, 1) == length(ydata) == length(ydata_err)
+    @assert length(lscales_guess) == length(lscales_lower) == length(lscales_upper) == size(xdata, 2)
+
+    @time result = optimize(lscales -> -log_marginal_likelihood(xdata, ydata, kernel_SE_ndims, [sigma_f; lscales]; ydata_err=ydata_err), lscales -> -gradient_log_marginal_likelihood(xdata, ydata, kernel_SE_ndims, [sigma_f; lscales]; ydata_err=ydata_err)[2:end], lscales_guess, BFGS(); inplace = false) #unconstrained, with gradient
+
+    lscales_best = Optim.minimizer(result)
+    hparams_best = [sigma_f; lscales_best]
+    log_p_best = -Optim.minimum(result)
+    println("Best (hparams, log_p): ", (hparams_best, -log_p_best))
+    return hparams_best, log_p_best
+end
+
+"""
+Optimize the 'sigma_f' and 'scale_l' hyperparameters of the squared exponential kernel using maximum likelihood estimation, where the length scales 'lscales = scale_l*lscales_rel', given a vector of fixed relative length scales 'lscales_rel', a training dataset, and an initial guess for 'sigma_f' and 'scale_l'.
+"""
+function optimize_hparams_SE_ndims_fixed_relative_lscales_with_MLE(scales_guess::Vector{Float64}, xdata::Array{Float64,2}, ydata::Vector{Float64}; ydata_err::Vector{Float64}=zeros(length(ydata)), lscales_rel::Vector{Float64}=ones(size(xdata, 2)), scales_lower::Vector{Float64}=ones(length(scales_guess)).*1e-2, scales_upper::Vector{Float64}=ones(length(scales_guess)).*1e2)
+    @assert size(xdata, 1) == length(ydata) == length(ydata_err)
+    @assert length(scales_guess) == length(scales_lower) == length(scales_upper) == 2
+    @assert length(lscales_rel) == size(xdata, 2)
+
+    @time result = optimize(scales -> -log_marginal_likelihood(xdata, ydata, kernel_SE_ndims, [scales[1]; scales[2].*lscales_rel]; ydata_err=ydata_err), scales_guess, BFGS()) #unconstrained, no gradient
+
+    scales_best = Optim.minimizer(result)
+    hparams_best = [scales_best[1]; scales_best[2].*lscales_rel]
+    log_p_best = -Optim.minimum(result)
+    println("Best ([sigma_f, scale_l], log_p): ", (scales_best, -log_p_best))
+    println("Best hparams: ", hparams_best)
     return hparams_best, log_p_best
 end
 
