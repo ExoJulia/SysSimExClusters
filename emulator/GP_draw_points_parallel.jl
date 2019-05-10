@@ -1,6 +1,6 @@
 using Distributed
 
-addprocs(2) #number of additional processors
+addprocs(13) #number of additional processors
 
 using SharedArrays
 #@everywhere using DistributedArrays

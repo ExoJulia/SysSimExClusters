@@ -1,4 +1,3 @@
-#include("GP_test.jl")
 include("GP_emulator.jl")
 
 """

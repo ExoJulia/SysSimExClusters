@@ -260,6 +260,13 @@ function target_function(active_param::Vector{Float64}, use_KS_or_AD::String, Ke
     #If 'save_dist=true', the function also saves the distances (unweighted and weighted, individual and total) to a file (assuming file 'f' is open for writing).
 
     println("Active parameter values: ", active_param)
+    #=
+    log_rate = active_param[2] + active_param[3]
+    if log_rate > 2.5
+        println(f, "Not simulating to save time because ln(lc*lp) = $(log_rate) > 2.5 !")
+        return 1e6
+    end
+    =#
     if save_dist
         println(f, "Active_params: ", active_param) #to write the params to file
     end
