@@ -14,14 +14,14 @@ function calc_summary_stats_idx_n_tranets!(css::CatalogSummaryStatistics, cat_ob
   if haskey(css.cache,"idx_n_tranets")
      return css.cache["idx_n_tranets"]
   end
-     max_tranets_in_sys = get_int(param,"max_tranets_in_sys")    
+     max_tranets_in_sys = get_int(param,"max_tranets_in_sys")
      idx_n_tranets = Vector{Int64}[ Int64[] for m = 1:max_tranets_in_sys]
      for n in 1:max_tranets_in_sys-1
        idx_n_tranets[n] = findall(x::KeplerTargetObs-> length(x.obs) == n, cat_obs.target )
      end
      idx_n_tranets[max_tranets_in_sys] = findall(x::KeplerTargetObs-> length(x.obs) >= max_tranets_in_sys, cat_obs.target )
      css.cache["idx_n_tranets"] = idx_n_tranets
-  return idx_n_tranets 
+  return idx_n_tranets
 end
 
 # Count total number of tranets using lists of indices for N-tranet systems
@@ -38,7 +38,7 @@ function calc_summary_stats_num_tranets!(css::CatalogSummaryStatistics, cat_obs:
          num_tranets += n*length(idx_n_tranets[n])
      end
      css.stat["num_tranets"] = num_tranets
-  return num_tranets 
+  return num_tranets
 end
 
 function calc_summary_stats_num_targets!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam ; trueobs_cat::Bool = false)
@@ -51,7 +51,7 @@ end
 
 function calc_summary_stats_num_n_tranet_systems!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
   idx_n_tranets = calc_summary_stats_idx_n_tranets!(css,cat_obs,param)
-  #max_tranets_in_sys = get_int(param,"max_tranets_in_sys")    
+  #max_tranets_in_sys = get_int(param,"max_tranets_in_sys")
   num_n_tranet_systems = map(n->length(idx_n_tranets[n]), 1:length(idx_n_tranets) )
   #for n in 1:length(idx_n_tranets)
   #  num_n_tranet_systems[n] = length(idx_n_tranets[n])
@@ -66,7 +66,7 @@ function calc_summary_stats_duration_ratios_neighbors!(css::CatalogSummaryStatis
      return css.cache["duration_ratio_list"]
   end
   idx_n_tranets = calc_summary_stats_idx_n_tranets!(css,cat_obs,param)
-  @assert length(idx_n_tranets) >= 1 
+  @assert length(idx_n_tranets) >= 1
 
   # Calculate how many duration ratios there will be & allocate storage
   num_ratios = 0
@@ -120,7 +120,7 @@ function calc_summary_stats_period_radius_ratios_neighbors_internal!(css::Catalo
   end
   =#
   idx_n_tranets = calc_summary_stats_idx_n_tranets!(css,cat_obs,param)
-  @assert length(idx_n_tranets) >= 1 
+  @assert length(idx_n_tranets) >= 1
 
   # Calculate how many period ratios there will be & allocate storage
   num_ratios = 0
@@ -211,10 +211,10 @@ function calc_summary_stats_mean_std_log_period_depth!(css::CatalogSummaryStatis
   #weight_list = ones(num_tranets)
 
   idx_n_tranets = calc_summary_stats_idx_n_tranets!(css, cat_obs, param)
-  max_tranets_in_sys = get_int(param,"max_tranets_in_sys") 
+  max_tranets_in_sys = get_int(param,"max_tranets_in_sys")
   @assert max_tranets_in_sys >= 1
    i = 1   # tranet id
-   for targ in cat_obs.target                        # For each target 
+   for targ in cat_obs.target                        # For each target
      for j in 1:min(length(targ.obs),max_tranets_in_sys)          # For each tranet around that target (but truncated if too many tranets in one system)
          #println("# i= ",i," j= ",j)
          period_list[i] = targ.obs[j].period
@@ -236,7 +236,7 @@ function calc_summary_stats_mean_std_log_period_depth!(css::CatalogSummaryStatis
   css.stat["std log10 P"]  = std_log_P = stdm(log_period_list,mean_log_P)
   css.stat["std log10 depth"]  = std_log_depth = stdm(log_depth_list,mean_log_depth)
 
-  return (mean_log_P, std_log_P, mean_log_depth, std_log_depth) 
+  return (mean_log_P, std_log_P, mean_log_depth, std_log_depth)
 end
 
 function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
@@ -251,7 +251,7 @@ function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStati
   depth_below_list = Float64[] #list to be filled with the transit depths of planets below the boundary
 
   idx_n_tranets = calc_summary_stats_idx_n_tranets!(css, cat_obs, param)
-  max_tranets_in_sys = get_int(param,"max_tranets_in_sys") 
+  max_tranets_in_sys = get_int(param,"max_tranets_in_sys")
   @assert max_tranets_in_sys >= 1
   i = 0   # tranet id
   for targ in cat_obs.target                        # For each target
@@ -319,14 +319,14 @@ function calc_summary_stats_obs_binned_rates!(css::CatalogSummaryStatistics, cat
     warn("Observational data has more transiting planets in one systems than max_tranets_in_sys allows.")
   end
   num_tranets  = convert(Int64,num_tranets)            # TODO OPT: Figure out why is not this already an Int.  I may be doing something that prevents some optimizations
-  css.cache["num_tranets"] = num_tranets                                   
+  css.cache["num_tranets"] = num_tranets
 
   num_sys_tranets = zeros(max_tranets_in_sys)                           # Since observed data, don't need to calculate probabilities.
   for n in 1:max_tranets_in_sys                                         # Make histogram of N-tranet systems
     num_sys_tranets[n] = length(idx_n_tranets[n])
   end
   css.stat["num_sys_tranets"] = num_sys_tranets
-  css.stat["planets detected"] = num_tranets 
+  css.stat["planets detected"] = num_tranets
   =#
 
   period_list = zeros(num_tranets)
@@ -352,7 +352,7 @@ function calc_summary_stats_obs_binned_rates!(css::CatalogSummaryStatistics, cat
     P_match = findall(x -> ((x > limitP[i]) && (x < limitP[i+1])), period_list)
     for j in 1:(length(limitRp)-1)
       R_match = findall(x -> ((x > limitRp[j]) && (x < limitRp[j+1])), radius_list)
-      
+
       bin_match = intersect(P_match, R_match)
 
       np_bin[np_bin_idx] = sum(weight_list[bin_match])

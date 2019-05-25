@@ -9,3 +9,4 @@ include("distance.jl")
 #include("stellar_catalog.jl")
 
 include("mr_model/MRpredict.jl")
+include("catalog_simulation.jl")

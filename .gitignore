@@ -8,7 +8,7 @@ julia_types
 libcorbits.so
 profile*
 *.out
-observed_catalog_planets.txt
-observed_catalog_stars.txt
-physical_catalog_planets.txt
-physical_catalog_stars.txt
+observed_catalog.csv
+observed_catalog_stars.csv
+physical_catalog.csv
+physical_catalog_stars.csv
