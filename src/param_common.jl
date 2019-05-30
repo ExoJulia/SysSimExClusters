@@ -23,8 +23,8 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     #add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_simple) # An alternative that alternative can be used for testing if above breaks
     add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_from_table)
     add_param_fixed(sim_param,"window_function", "DR25topwinfuncs.jld2")
-    #add_param_fixed(sim_param,"osd_file","dr25fgk_small_osds.jld2")
-    add_param_fixed(sim_param,"osd_file","dr25fgk_relaxcut_osds.jld2") # WARNING: need 8gb of memory to read this file
+    add_param_fixed(sim_param,"osd_file","dr25fgk_small_osds.jld2")
+    #add_param_fixed(sim_param,"osd_file","dr25fgk_relaxcut_osds.jld2") # WARNING: need 8gb of memory to read this file
 
     # For generating planetary system properties:
     add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered) # For Non-clustered model: "generate_planetary_system_non_clustered"
