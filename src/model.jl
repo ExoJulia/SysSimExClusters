@@ -3,7 +3,7 @@ if !@isdefined ExoplanetsSysSim
 end
 
 # Code for generating clustered planetary systems (once stable can move to src/planetary_system.jl)
-
+#= Moved to core SysSim repo.  Delete once confirm that it works post-move
 function calc_hill_sphere(a::Float64, mu::Float64)
     return a*(mu/3)^(1//3)
 end
@@ -83,6 +83,7 @@ function calc_if_near_resonance(P::AbstractVector{Float64}, sim_param::SimParam)
     end # at least two planets
     return result
 end
+=#
 
 #=
 # TODO: OPT: Try saving extracted params to a struct?
@@ -173,13 +174,13 @@ end
 function generate_num_planets_in_cluster_poisson(s::Star, sim_param::SimParam)
     lambda::Float64 = exp(get_real(sim_param, "log_rate_planets_per_cluster"))
     max_planets_in_cluster::Int64 = get_int(sim_param, "max_planets_in_cluster")
-    return ExoplanetsSysSim.draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
+    return draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
 end
 
 function generate_num_clusters_poisson(s::Star, sim_param::SimParam)
     lambda::Float64 = exp(get_real(sim_param, "log_rate_clusters"))
     max_clusters_in_sys::Int64 = get_int(sim_param, "max_clusters_in_sys")
-    return ExoplanetsSysSim.draw_truncated_poisson(lambda, min=0, max=max_clusters_in_sys, n=1)[1]
+    return draw_truncated_poisson(lambda, min=0, max=max_clusters_in_sys, n=1)[1]
     #return ExoplanetsSysSim.generate_num_planets_poisson(lambda, max_clusters_in_sys) ##### Use this if setting max_clusters_in_sys > 20
 end
 
@@ -230,7 +231,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             while !valid_period_scale && attempt_period_scale<max_attempts_period_scale && valid_cluster
                 attempt_period_scale += 1
 
-                period_scale::Array{Float64,1} = ExoplanetsSysSim.draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)
+                period_scale::Array{Float64,1} = draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)
                 #Note: this ensures that the minimum and maximum periods will be in the range [min_period, max_period]
                 #Warning: not sure about the behaviour when min_period/minimum(Plist_tmp) > max_period/maximum(Plist_tmp) (i.e. when the cluster cannot fit in the given range)?
                 #TODO OPT: could draw period_scale more efficiently by computing the allowed regions in [min_period, max_period] given the previous cluster draws
@@ -361,7 +362,7 @@ function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::
     valid_system = false
     while !valid_system && attempt_system < max_attempts_system
 
-        num_pl = ExoplanetsSysSim.generate_num_planets_poisson(lambda, max_clusters_in_sys)
+        num_pl = generate_num_planets_poisson(lambda, max_clusters_in_sys)
 
         if num_pl==0
             valid_system = true

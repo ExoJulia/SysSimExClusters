@@ -73,6 +73,8 @@ function calc_distance_mean_std_log_period_depth(summary1::CatalogSummaryStatist
     return [d1, d2, d3, d4]
 end
 
+#= Moved to SysSim core repository, delete after confirm works post-move
+
 # compute supremum of differences between empirical cdfs.
 # Borrowed from JuliaStats/HypothesisTests.jl
 function ksstats(x::AbstractVector{T}, y::AbstractVector{S}) where {T <: Real, S <: Real}
@@ -143,6 +145,9 @@ function CRPDstats(En::AbstractVector{T}, On::AbstractVector{S}) where {T <: Int
     rho = (9/5)*rho
     return rho
 end
+
+=#
+
 
 function calc_distance_ks_period(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   samp1 = summary1.stat["P list"]
