@@ -30,11 +30,11 @@ git clone git@github.com:ExoJulia/SysSimExClusters.git
 ### Usage:
 
 To generate one simulated catalog (physical and observed) from the Clustered model with a user defined set of model parameters, do the following:
-1. Move into the "src/" directory and edit the file "param_common.jl". Set a value for each of the model parameters. For example:
+1. Move into the "src/" directory and edit the file "param_common.jl". Set a value for each of the model parameters. For example, to change the mean number of clusters, planets per cluster, and period power-law:
 ```julia
-add_param_active(sim_param,"log_rate_clusters", log(1.6)) # Set the (log) mean number of clusters
+add_param_active(sim_param,"log_rate_clusters", log(1.6))            # Set the (log) mean number of clusters
 add_param_active(sim_param,"log_rate_planets_per_cluster", log(1.6)) # Set the (log) mean number of planets per cluster
-add_param_active(sim_param,"power_law_P", 0.) # Set the period power-law index (-1 = flat in log-period)
+add_param_active(sim_param,"power_law_P", 0.)                        # Set the period power-law index (-1 = flat in log-period)
 ```
 2. Move into a directory where you want your simulated catalogs to be saved and run the script "generate_catalogs.jl" in "examples/" in Julia. For example, you can navigate to "examples/", start Julia, and run:
 ```julia
@@ -44,6 +44,7 @@ This will generate the following files:
 * Physical and observed catalogs of planets in table format:
   * "physical_catalog.csv"
   * "observed_catalog.csv"
+These files are analogous to the simulated catalogs we provide as described above.
 * An individual file for the true periods, orbital eccentricities, planet radii, planet masses, stellar radii, and stellar masses, of all the planets per system (and stars with planets) in the physical catalog:
   * "periods_all.out"
   * "eccentricities_all.out"
@@ -51,14 +52,14 @@ This will generate the following files:
   * "masses_all.out"
   * "stellar_radii_with_planets.out"
   * "stellar_masses_with_planets.out"
-  The data in these files are the same as those found in "physical_catalog.csv", just organized in a different format.
+The data in these files are the same as those in "physical_catalog.csv", just organized in a different format.
 * An individual file for the observed periods, transit depths, transit durations, stellar radii, and stellar masses of all the planets (and stars with observed planets) in the observed catalog:
   * "periods.out"
   * "depths.out"
   * "durations.out"
   * "stellar_radii_obs.out"
   * "stellar_masses_obs.out"
-  The data in these files are the same as those found in "observed_catalog.csv", just organized in a different format (sorted into systems with 1, 2, 3, ..., and 8 observed planets).
+The data in these files are the same as those in "observed_catalog.csv", just organized in a different format (sorted into systems with 1, 2, 3, ..., and 8 observed planets).
 
 
 
