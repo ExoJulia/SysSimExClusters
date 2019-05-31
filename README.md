@@ -44,6 +44,7 @@ This will generate the following files:
 * Physical and observed catalogs of planets in table format:
   * "physical_catalog.csv"
   * "observed_catalog.csv"
+
 These files are analogous to the simulated catalogs we provide as described above.
 * An individual file for the true periods, orbital eccentricities, planet radii, planet masses, stellar radii, and stellar masses, of all the planets per system (and stars with planets) in the physical catalog:
   * "periods_all.out"
@@ -52,6 +53,7 @@ These files are analogous to the simulated catalogs we provide as described abov
   * "masses_all.out"
   * "stellar_radii_with_planets.out"
   * "stellar_masses_with_planets.out"
+
 The data in these files are the same as those in "physical_catalog.csv", just organized in a different format.
 * An individual file for the observed periods, transit depths, transit durations, stellar radii, and stellar masses of all the planets (and stars with observed planets) in the observed catalog:
   * "periods.out"
@@ -59,6 +61,7 @@ The data in these files are the same as those in "physical_catalog.csv", just or
   * "durations.out"
   * "stellar_radii_obs.out"
   * "stellar_masses_obs.out"
+
 The data in these files are the same as those in "observed_catalog.csv", just organized in a different format (sorted into systems with 1, 2, 3, ..., and 8 observed planets).
 
 
