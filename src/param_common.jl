@@ -73,8 +73,8 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     # Functions to calculate observables from physical system properties:
     add_param_fixed(sim_param,"calc_target_obs_single_obs", ExoplanetsSysSim.calc_target_obs_single_obs)
     add_param_fixed(sim_param,"max_tranets_in_sys", 8) # SysSim ignores some planets in any systems with more than this many transiting planets to avoid wasting time on unphysical parameter values
-    add_param_fixed(sim_param,"transit_noise_model", ExoplanetsSysSim.transit_noise_model_fixed_noise)
-    #add_param_fixed(sim_param,"transit_noise_model", ExoplanetsSysSim.transit_noise_model_diagonal)
+    #add_param_fixed(sim_param,"transit_noise_model", ExoplanetsSysSim.transit_noise_model_fixed_noise)
+    add_param_fixed(sim_param,"transit_noise_model", ExoplanetsSysSim.transit_noise_model_diagonal)
     #add_param_fixed(sim_param,"rng_seed",1234) # If you want to be able to reproduce simulations
     add_param_fixed(sim_param,"read_target_obs", ExoplanetsSysSim.simulated_read_kepler_observations) # Read Kepler observations to compare to from disk
 
