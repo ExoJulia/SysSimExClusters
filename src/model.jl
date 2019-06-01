@@ -2,88 +2,6 @@ if !@isdefined ExoplanetsSysSim
     using ExoplanetsSysSim
 end
 
-# Code for generating clustered planetary systems (once stable can move to src/planetary_system.jl)
-
-function calc_hill_sphere(a::Float64, mu::Float64)
-    return a*(mu/3)^(1//3)
-end
-
-function calc_mutual_hill_radii(ps::PlanetarySystem{StarT}, pl1::Int64, pl2::Int64) where StarT <: StarAbstract
-    mu = (ps.planet[pl1].mass + ps.planet[pl2].mass)/ps.star.mass
-    a = 0.5*(ps.orbit[pl1].a + ps.orbit[pl2].a)
-    return calc_hill_sphere(a, mu)
-end
-
-function test_stability_circular(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam)
-    @assert length(P) == length(mass)
-    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
-    found_instability = false
-    order = sortperm(P)
-    a2 = semimajor_axis(P[order[1]], star_mass)
-    for pl in 1:(length(P)-1)
-        a1 = a2   # semimajor_axis(P[order[pl]],star_mass)
-        a2 = semimajor_axis(P[order[pl+1]], star_mass)
-        a = 0.5*(a1+a2)
-        mu = (mass[order[pl]] + mass[order[pl+1]])/star_mass
-        mutual_hill_radius = calc_hill_sphere(a, mu)
-        if a2-a1  < min_num_mutual_hill_radii*mutual_hill_radius
-            found_instability = true
-            break
-        end
-    end # loop over neighboring planet pairs within cluster
-    return !found_instability
-end
-
-function test_stability(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; ecc::AbstractVector{Float64}=zeros(length(P)))
-    @assert length(P) == length(mass) == length(ecc)
-    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
-    found_instability = false
-    order = sortperm(P)
-    a2 = semimajor_axis(P[order[1]], star_mass)
-    for pl in 1:(length(P)-1)
-        a1 = a2   # semimajor_axis(P[order[pl]],star_mass)
-        a2 = semimajor_axis(P[order[pl+1]], star_mass)
-        a = 0.5*(a1+a2)
-        mu = (mass[order[pl]] + mass[order[pl+1]])/star_mass
-        mutual_hill_radius = calc_hill_sphere(a, mu)
-        e1 = ecc[order[pl]]
-        e2 = ecc[order[pl+1]]
-        if a2*(1-e2)-a1*(1+e1) < min_num_mutual_hill_radii*mutual_hill_radius
-            found_instability = true
-            break
-        end
-    end # loop over neighboring planet pairs within cluster
-    return !found_instability
-end
-
-function is_period_ratio_near_resonance(period_ratio::Float64, sim_param::SimParam)
-    resonance_width = get_real(sim_param, "resonance_width")
-    resonance_width_factor = 1+resonance_width
-    period_ratios_to_check = get_any(sim_param, "period_ratios_mmr", Array{Float64,1})
-    result = false
-    for period_ratio_mmr in period_ratios_to_check
-        if period_ratio_mmr <= period_ratio <= period_ratio_mmr*resonance_width_factor
-            result = true
-            break
-        end
-    end
-    return result
-end
-
-function calc_if_near_resonance(P::AbstractVector{Float64}, sim_param::SimParam)
-    @assert issorted(P)   # TODO: OPT: Could remove once know it is safe
-    result = falses(length(P))
-    if length(P) >= 2
-        for i in 1:(length(P)-1)
-            if is_period_ratio_near_resonance(P[i+1]/P[i], sim_param)
-                result[i] = true
-                result[i+1] = true
-            end # near mmr
-        end # planets
-    end # at least two planets
-    return result
-end
-
 #=
 # TODO: OPT: Try saving extracted params to a struct?
 struct generate_planet_plan
@@ -173,13 +91,13 @@ end
 function generate_num_planets_in_cluster_poisson(s::Star, sim_param::SimParam)
     lambda::Float64 = exp(get_real(sim_param, "log_rate_planets_per_cluster"))
     max_planets_in_cluster::Int64 = get_int(sim_param, "max_planets_in_cluster")
-    return ExoplanetsSysSim.draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
+    return draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
 end
 
 function generate_num_clusters_poisson(s::Star, sim_param::SimParam)
     lambda::Float64 = exp(get_real(sim_param, "log_rate_clusters"))
     max_clusters_in_sys::Int64 = get_int(sim_param, "max_clusters_in_sys")
-    return ExoplanetsSysSim.draw_truncated_poisson(lambda, min=0, max=max_clusters_in_sys, n=1)[1]
+    return draw_truncated_poisson(lambda, min=0, max=max_clusters_in_sys, n=1)[1]
     #return ExoplanetsSysSim.generate_num_planets_poisson(lambda, max_clusters_in_sys) ##### Use this if setting max_clusters_in_sys > 20
 end
 
@@ -230,7 +148,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             while !valid_period_scale && attempt_period_scale<max_attempts_period_scale && valid_cluster
                 attempt_period_scale += 1
 
-                period_scale::Array{Float64,1} = ExoplanetsSysSim.draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)
+                period_scale::Array{Float64,1} = draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)
                 #Note: this ensures that the minimum and maximum periods will be in the range [min_period, max_period]
                 #Warning: not sure about the behaviour when min_period/minimum(Plist_tmp) > max_period/maximum(Plist_tmp) (i.e. when the cluster cannot fit in the given range)?
                 #TODO OPT: could draw period_scale more efficiently by computing the allowed regions in [min_period, max_period] given the previous cluster draws
@@ -361,7 +279,7 @@ function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::
     valid_system = false
     while !valid_system && attempt_system < max_attempts_system
 
-        num_pl = ExoplanetsSysSim.generate_num_planets_poisson(lambda, max_clusters_in_sys)
+        num_pl = generate_num_planets_poisson(lambda, max_clusters_in_sys)
 
         if num_pl==0
             valid_system = true
