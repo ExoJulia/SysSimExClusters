@@ -8,7 +8,7 @@ include(joinpath(dir_path, "../src/optimization.jl"))
 
 save_path = "test"
 file_name = "GP_train2000_meanf75.0_sigmaf1.0_lscales36.37_vol273.72_points10000_meanInf_stdInf_post-45.0.csv"
-GP_points = CSV.read(joinpath("test", file_name), comment="#", allowmissing=:none)
+GP_points = CSV.read(joinpath(save_path, file_name), comment="#", allowmissing=:none)
 active_params_names = names(GP_points)[1:end-3]
 active_params_best_all = GP_points[active_params_names]
 
@@ -64,10 +64,12 @@ while save_count < n_keep && sim_count < size(active_params_best_all,1)
 
     # To save the catalog if the weighted distance passes the distance threshold:
     if dist_w <= d_threshold
-        println("Saving catalog $sim_count: dist_w = $dist_w")
+        println("### Saving catalog $sim_count: dist_w = $dist_w")
         save_count += 1
         save_physical_catalog_given_cat_phys(cat_phys_copy, sim_param; save_path=save_path, run_number=save_count)
         save_observed_catalog_given_cat_phys_obs(cat_phys, cat_obs, summary_stat, sim_param; save_path=save_path, run_number=save_count)
+    else
+        println("### Not saving catalog $sim_count: dist_w = $dist_w")
     end
 
     summary_array = vcat(summary_array, reshape([[GP_points[sim_count,j] for j in 1:size(GP_points,2)]; dist_w - mean_f], (1,size(GP_points,2)+1)))
