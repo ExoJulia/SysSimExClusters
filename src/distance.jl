@@ -76,25 +76,25 @@ end
 function calc_distance_ks_period(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   samp1 = summary1.stat["P list"]
   samp2 = summary2.stat["P list"]
-  return ksstats(samp1,samp2)[5]
+  return ExoplanetsSysSim.ksstats(samp1,samp2)[5]
 end
 
 function calc_distance_ks_depth(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   samp1 = summary1.stat["depth list"]
   samp2 = summary2.stat["depth list"]
-  return ksstats(samp1,samp2)[5]
+  return ExoplanetsSysSim.ksstats(samp1,samp2)[5]
 end
 
 function calc_distance_ks_period_ratios(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   samp1 = summary1.stat["period_ratio_list"]
   samp2 = summary2.stat["period_ratio_list"]
-  return ksstats(samp1,samp2)[5]
+  return ExoplanetsSysSim.ksstats(samp1,samp2)[5]
 end
 
 function calc_distance_ks_duration_ratios(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   samp1 = summary1.stat["duration_ratio_list"]
   samp2 = summary2.stat["duration_ratio_list"]
-  return ksstats(samp1,samp2)[5]
+  return ExoplanetsSysSim.ksstats(samp1,samp2)[5]
 end
 
 # Function for Relative Entropy / K-L divergence

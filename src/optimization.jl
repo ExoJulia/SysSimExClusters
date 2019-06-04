@@ -51,9 +51,9 @@ function calc_distance(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, ss2::Exop
     cos_factor = cos(max_incl_sys*pi/180) #factor to divide the number of targets in simulation by to get the actual number of targets needed (with an isotropic distribution of system inclinations) to produce as many transiting systems for a single observer
 
     delta_f = abs(ss1.stat["num_tranets"]/(ss1.stat["num targets"]/cos_factor) - ss2.stat["num_tranets"]/(ss2.stat["num targets"]))
-    d_mult_KS = ksstats_ints(M_cat_obs1, M_cat_obs2)[5]
-    d_mult_CRPD = CRPDstats([Nmult_obs1[1:4]; sum(Nmult_obs1[5:end])], [Nmult_obs2[1:4]; sum(Nmult_obs2[5:end])])
-    d_mult_CRPD_switched = CRPDstats([Nmult_obs2[1:4]; sum(Nmult_obs2[5:end])], [Nmult_obs1[1:4]; sum(Nmult_obs1[5:end])])
+    d_mult_KS = ExoplanetsSysSim.ksstats_ints(M_cat_obs1, M_cat_obs2)[5]
+    d_mult_CRPD = ExoplanetsSysSim.CRPDstats([Nmult_obs1[1:4]; sum(Nmult_obs1[5:end])], [Nmult_obs2[1:4]; sum(Nmult_obs2[5:end])])
+    d_mult_CRPD_switched = ExoplanetsSysSim.CRPDstats([Nmult_obs2[1:4]; sum(Nmult_obs2[5:end])], [Nmult_obs1[1:4]; sum(Nmult_obs1[5:end])])
 
     #To compute the KS distances:
     d_KS = Array{Float64}(undef, 17)
@@ -61,25 +61,25 @@ function calc_distance(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, ss2::Exop
     d_KS[2] = d_mult_KS
     d_KS[3] = d_mult_CRPD
     d_KS[4] = d_mult_CRPD_switched
-    d_KS[5] = ksstats(ss1.stat["P list"], ss2.stat["P list"])[5]
-    d_KS[6] = ksstats(ss1.stat["period_ratio_list"], ss2.stat["period_ratio_list"])[5]
-    d_KS[7] = ksstats(ss1.stat["duration list"], ss2.stat["duration list"])[5]
-    d_KS[8] = ksstats(ss1.stat["duration_ratio_list"], ss2.stat["duration_ratio_list"])[5]
-    d_KS[9] = ksstats(ss1.stat["duration_ratio_non_mmr_list"], ss2.stat["duration_ratio_non_mmr_list"])[5]
-    d_KS[10] = ksstats(ss1.stat["duration_ratio_near_mmr_list"], ss2.stat["duration_ratio_near_mmr_list"])[5]
-    d_KS[11] = ksstats(ss1.stat["depth list"], ss2.stat["depth list"])[5]
-    d_KS[12] = ksstats(ss1.stat["depth above list"], ss2.stat["depth above list"])[5]
-    d_KS[13] = ksstats(ss1.stat["depth below list"], ss2.stat["depth below list"])[5]
-    d_KS[14] = ksstats(ss1.stat["radius_ratio_list"], ss2.stat["radius_ratio_list"])[5]
-    d_KS[15] = ksstats(ss1.stat["radius_ratio_above_list"], ss2.stat["radius_ratio_above_list"])[5]
-    d_KS[16] = ksstats(ss1.stat["radius_ratio_below_list"], ss2.stat["radius_ratio_below_list"])[5]
-    d_KS[17] = ksstats(ss1.stat["radius_ratio_across_list"], ss2.stat["radius_ratio_across_list"])[5]
+    d_KS[5] = ExoplanetsSysSim.ksstats(ss1.stat["P list"], ss2.stat["P list"])[5]
+    d_KS[6] = ExoplanetsSysSim.ksstats(ss1.stat["period_ratio_list"], ss2.stat["period_ratio_list"])[5]
+    d_KS[7] = ExoplanetsSysSim.ksstats(ss1.stat["duration list"], ss2.stat["duration list"])[5]
+    d_KS[8] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_list"], ss2.stat["duration_ratio_list"])[5]
+    d_KS[9] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_non_mmr_list"], ss2.stat["duration_ratio_non_mmr_list"])[5]
+    d_KS[10] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_near_mmr_list"], ss2.stat["duration_ratio_near_mmr_list"])[5]
+    d_KS[11] = ExoplanetsSysSim.ksstats(ss1.stat["depth list"], ss2.stat["depth list"])[5]
+    d_KS[12] = ExoplanetsSysSim.ksstats(ss1.stat["depth above list"], ss2.stat["depth above list"])[5]
+    d_KS[13] = ExoplanetsSysSim.ksstats(ss1.stat["depth below list"], ss2.stat["depth below list"])[5]
+    d_KS[14] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_list"], ss2.stat["radius_ratio_list"])[5]
+    d_KS[15] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_above_list"], ss2.stat["radius_ratio_above_list"])[5]
+    d_KS[16] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_below_list"], ss2.stat["radius_ratio_below_list"])[5]
+    d_KS[17] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_across_list"], ss2.stat["radius_ratio_across_list"])[5]
 
     #To compute the AD distances:
     if AD_mod
-        ADdist = ADstats_mod
+        ADdist = ExoplanetsSysSim.ADstats_mod
     else
-        ADdist = ADstats
+        ADdist = ExoplanetsSysSim.ADstats
     end
 
     d_AD = Array{Float64}(undef, 17)
@@ -174,9 +174,9 @@ function calc_distance_Kepler(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, re
     cos_factor = cos(max_incl_sys*pi/180) #factor to divide the number of targets in simulation by to get the actual number of targets needed (with an isotropic distribution of system inclinations) to produce as many transiting systems for a single observer
 
     delta_f = abs(ss1.stat["num_tranets"]/(ss1.stat["num targets"]/cos_factor) - length(P_confirmed)/get_int(sim_param,"num_kepler_targets"))
-    d_mult_KS = ksstats_ints(M_cat_obs, M_confirmed)[5]
-    d_mult_CRPD = CRPDstats([Nmult_obs[1:4]; sum(Nmult_obs[5:end])], [Nmult_confirmed[1:4]; sum(Nmult_confirmed[5:end])])
-    d_mult_CRPD_switched = CRPDstats([Nmult_confirmed[1:4]; sum(Nmult_confirmed[5:end])], [Nmult_obs[1:4]; sum(Nmult_obs[5:end])])
+    d_mult_KS = ExoplanetsSysSim.ksstats_ints(M_cat_obs, M_confirmed)[5]
+    d_mult_CRPD = ExoplanetsSysSim.CRPDstats([Nmult_obs[1:4]; sum(Nmult_obs[5:end])], [Nmult_confirmed[1:4]; sum(Nmult_confirmed[5:end])])
+    d_mult_CRPD_switched = ExoplanetsSysSim.CRPDstats([Nmult_confirmed[1:4]; sum(Nmult_confirmed[5:end])], [Nmult_obs[1:4]; sum(Nmult_obs[5:end])])
 
     #To compute the KS distances:
     d_KS = Array{Float64}(undef, 17)
@@ -184,25 +184,25 @@ function calc_distance_Kepler(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, re
     d_KS[2] = d_mult_KS
     d_KS[3] = d_mult_CRPD
     d_KS[4] = d_mult_CRPD_switched
-    d_KS[5] = ksstats(ss1.stat["P list"], P_confirmed)[5]
-    d_KS[6] = ksstats(ss1.stat["period_ratio_list"], R_confirmed)[5]
-    d_KS[7] = ksstats(ss1.stat["duration list"].*24, t_D_confirmed)[5] #transit durations in simulations are in days, while in the Kepler catalog are in hours
-    d_KS[8] = ksstats(ss1.stat["duration_ratio_list"], xi_confirmed)[5]
-    d_KS[9] = ksstats(ss1.stat["duration_ratio_non_mmr_list"], xi_non_mmr_confirmed)[5]
-    d_KS[10] = ksstats(ss1.stat["duration_ratio_near_mmr_list"], xi_near_mmr_confirmed)[5]
-    d_KS[11] = ksstats(ss1.stat["depth list"], D_confirmed)[5]
-    d_KS[12] = ksstats(ss1.stat["depth above list"], D_above_confirmed)[5]
-    d_KS[13] = ksstats(ss1.stat["depth below list"], D_below_confirmed)[5]
-    d_KS[14] = ksstats(ss1.stat["radius_ratio_list"].^2, D_ratio_confirmed)[5] #simulations save radius ratios while we computed transit duration ratios from the Kepler catalog
-    d_KS[15] = ksstats(ss1.stat["radius_ratio_above_list"].^2, D_ratio_above_confirmed)[5]
-    d_KS[16] = ksstats(ss1.stat["radius_ratio_below_list"].^2, D_ratio_below_confirmed)[5]
-    d_KS[17] = ksstats(ss1.stat["radius_ratio_across_list"].^2, D_ratio_across_confirmed)[5]
+    d_KS[5] = ExoplanetsSysSim.ksstats(ss1.stat["P list"], P_confirmed)[5]
+    d_KS[6] = ExoplanetsSysSim.ksstats(ss1.stat["period_ratio_list"], R_confirmed)[5]
+    d_KS[7] = ExoplanetsSysSim.ksstats(ss1.stat["duration list"].*24, t_D_confirmed)[5] #transit durations in simulations are in days, while in the Kepler catalog are in hours
+    d_KS[8] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_list"], xi_confirmed)[5]
+    d_KS[9] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_non_mmr_list"], xi_non_mmr_confirmed)[5]
+    d_KS[10] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_near_mmr_list"], xi_near_mmr_confirmed)[5]
+    d_KS[11] = ExoplanetsSysSim.ksstats(ss1.stat["depth list"], D_confirmed)[5]
+    d_KS[12] = ExoplanetsSysSim.ksstats(ss1.stat["depth above list"], D_above_confirmed)[5]
+    d_KS[13] = ExoplanetsSysSim.ksstats(ss1.stat["depth below list"], D_below_confirmed)[5]
+    d_KS[14] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_list"].^2, D_ratio_confirmed)[5] #simulations save radius ratios while we computed transit duration ratios from the Kepler catalog
+    d_KS[15] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_above_list"].^2, D_ratio_above_confirmed)[5]
+    d_KS[16] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_below_list"].^2, D_ratio_below_confirmed)[5]
+    d_KS[17] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_across_list"].^2, D_ratio_across_confirmed)[5]
 
     #To compute the AD distances:
     if AD_mod
-        ADdist = ADstats_mod
+        ADdist = ExoplanetsSysSim.ADstats_mod
     else
-        ADdist = ADstats
+        ADdist = ExoplanetsSysSim.ADstats
     end
 
     d_AD = Array{Float64}(undef, 17)
