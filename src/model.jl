@@ -112,7 +112,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     # Generate a set of periods, planet radii, and planet masses:
     attempt_system = 0
     max_attempts_system = 1 #Note: currently this should not matter; each system is always attempted just once
-    local num_pl, Plist, Rlist, masslist, ecclist, omegalist
+    local num_pl, clusteridlist, Plist, Rlist, masslist, ecclist, omegalist
     valid_system = false
     while !valid_system && attempt_system < max_attempts_system
 
@@ -128,6 +128,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             return PlanetarySystem(star)
         end
 
+        clusteridlist::Array{Int64,1} = Array{Int64}(undef, num_pl)
         Plist::Array{Float64,1} = Array{Float64}(undef, num_pl)
         Rlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
         masslist::Array{Float64,1} = Array{Float64}(undef, num_pl)
@@ -139,6 +140,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         pl_stop = 0
         for c in 1:num_clusters
             pl_stop += num_pl_in_cluster[c]
+            clusteridlist[pl_start:pl_stop] = ones(Int64, num_pl_in_cluster[c])*c
             Plist_tmp::Array{Float64,1}, Rlist_tmp::Array{Float64,1}, masslist_tmp::Array{Float64,1}, ecclist_tmp::Array{Float64,1}, omegalist_tmp::Array{Float64,1} = generate_planet_periods_sizes_masses_eccs_in_cluster(star, sim_param, n=num_pl_in_cluster[c])
             Rlist[pl_start:pl_stop], masslist[pl_start:pl_stop], ecclist[pl_start:pl_stop], omegalist[pl_start:pl_stop] = Rlist_tmp, masslist_tmp, ecclist_tmp, omegalist_tmp
             valid_cluster = !any(isnan.(Plist_tmp)) #should this be looking for nans in Plist or Plist_tmp? Was Plist but I think it should be Plist_tmp!
@@ -174,6 +176,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         if any(isnanPlist)  # If any loop failed to generate valid planets, it should set a NaN in the period list
             keep::Array{Bool,1} = .!(isnanPlist)  # Currently, keeping clusters that could be fit, rather than throwing out entirely and starting from scratch.  Is this a good idea?  Matthias tried the other approach in his python code.
             num_pl = sum(keep)
+            clusteridlist = clusteridlist[keep]
             Plist = Plist[keep]
             Rlist = Rlist[keep]
             masslist = masslist[keep]
@@ -255,7 +258,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         mean_anom = 2pi*rand()
         incl = incl_mut!=zero(incl_mut) ? acos(cos(incl_sys)*cos(incl_mut) + sin(incl_sys)*sin(incl_mut)*cos(asc_node)) : incl_sys
         orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], incl, omegalist[idx[i]], asc_node, mean_anom)
-        pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]])
+        pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]], clusteridlist[idx[i]])
     end # for i in 1:num_pl
 
     return PlanetarySystem(star, pl, orbit)
