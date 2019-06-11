@@ -282,7 +282,7 @@ function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::
     valid_system = false
     while !valid_system && attempt_system < max_attempts_system
 
-        num_pl = generate_num_planets_poisson(lambda, max_clusters_in_sys)
+        num_pl = ExoplanetsSysSim.generate_num_planets_poisson(lambda, max_clusters_in_sys)
 
         if num_pl==0
             valid_system = true
