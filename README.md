@@ -7,13 +7,13 @@ This repository provides a comprehensive model for Clustered Planetary Systems f
 ## How to use our Clustered model for studying exoplanetary system populations:
 
 We provide a large set of simulated catalogs from our models directly in this repository. We refer to a *physical catalog* as a set of intrinsic, physical planetary systems, and an *observed catalog* as a set of transiting and detected planet candidates that a Kepler-like mission might produce. If you simply wish to use these simulated catalogs as examples of our models, then no installation is required! Simply download any of these tables and use them for your own science.
-* Navigate to the "examples/best_models/Clustered_P_R/" directory.\*
+* Navigate to the "best_models/Clustered_P_R/tables/" directory.\*
 * Download a "physical_catalogX.csv" file (X = an index/number) for a table including all the physical planets in a simulated catalog.
 * Download an "observed_catalogX.csv" file (X = an index/number) for a table including all the observed planets that a simulated Kepler mission would detect given the true planetary systems listed in "physical_catalogX.csv".
 
 \*Note: We also provide simulated catalogs from two other models, "Clustered_P" and "Non_Clustered", in their respective subdirectories. These models are also described in the paper linked above but we do not recommend using these models for science as they are not as good of a description of the data as our "Clustered_P_R" model.
 
-In each of these files, the header contains all the parameters of the model from which the systems in that catalog were generated from.
+In each of these files, the header contains all the parameters of the model used to generate that catalog.
 
 
 
@@ -41,12 +41,17 @@ add_param_active(sim_param,"power_law_P", 0.)                        # Set the p
 include("generate_catalogs.jl")
 ```
 This will generate the following files:
-* Physical and observed catalogs of planets in table format:
+* Physical and observed catalogs of planets (and stars) in table format:
   * "physical_catalog.csv"
+  * "physical_catalog_stars.csv"
   * "observed_catalog.csv"
+  * "observed_catalog_stars.csv"
 
 These files are analogous to the simulated catalogs we provide as described above.
-* An individual file for the true periods, orbital eccentricities, planet radii, planet masses, stellar radii, and stellar masses, of all the planets per system (and stars with planets) in the physical catalog:
+
+In addition, the following files will also be generated:
+* An individual file for the true cluster id's, periods, orbital eccentricities, planet radii, planet masses, stellar radii, and stellar masses, of all the planets per system (and stars with planets) in the physical catalog:
+  * "clusterids_all.out"
   * "periods_all.out"
   * "eccentricities_all.out"
   * "radii_all.out"
@@ -68,7 +73,7 @@ The data in these files are the same as those in "observed_catalog.csv", just or
 
 ## If you wish to make similar plots as those included in our paper:
 
-While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (2.7) code that was written by Matthias He. We provide these Python scripts but do not fully maintain or document them.
+While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (2.7) code that was written by Matthias He. We provide these Python scripts in the "plotting/" directory but do not fully maintain or document them.
 
 
 

@@ -162,7 +162,7 @@ prior_bounds = nothing
 
 
 # Clustered_P_R:
-#data_path = "/Users/Matthias/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Clustered_P_R/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some11_params_CRPDr_AD/Fixed_Rbreak3_Ncrit8/lc_0p2_5_lp_0p5_10_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90_sigmaR_0_0p5_sigmaP_0_0p3/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/AD_mod/GP_files"
+#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Clustered_P_R/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some11_params_CRPDr_AD/Fixed_Rbreak3_Ncrit8/lc_0p2_5_lp_0p5_10_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90_sigmaR_0_0p5_sigmaP_0_0p3/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/AD_mod/GP_files"
 
 # Transformed:
 #hparams_best = [1., 0.2, 0.6, 1., 1., 0.8, 1.5, 0.02, 30., 1., 0.15, 0.1]
@@ -171,7 +171,7 @@ prior_bounds = nothing
 
 
 # Clustered_P:
-#data_path = "/Users/Matthias/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Clustered_P/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some10_params_CRPDr_AD/Fixed_Rbreak3_Ncrit8/lc_0p2_5_lp_0p5_10_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90_sigmaP_0_0p3/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/AD_mod/GP_files"
+#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Clustered_P/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some10_params_CRPDr_AD/Fixed_Rbreak3_Ncrit8/lc_0p2_5_lp_0p5_10_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90_sigmaP_0_0p3/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/AD_mod/GP_files"
 
 # Transformed:
 #hparams_best = [1., 0.2, 0.6, 1., 0.8, 1., 1., 0.02, 30., 1., 0.1]
@@ -180,11 +180,11 @@ prior_bounds = nothing
 
 
 # Non_Clustered:
-#data_path = "/Users/Matthias/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Non_Clustered/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some8_params_CRPDr_KS/Fixed_Rbreak3_Ncrit8/lc_1_8_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/GP_files"
+#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Non_Clustered/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some8_params_CRPDr_KS/Fixed_Rbreak3_Ncrit8/lc_1_8_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/GP_files"
 #hparams_best = [1., 0.05, 0.3, 0.2, 0.5, 1., 0.01, 30., 0.25]
 #prior_bounds = [(0., 0.15), (0.7, 1.9), (-0.5, 0.3), (-2., 0.), (-6., -4.), (0., 0.03), (0., 90.), (0., 0.7)]
 
 
 
 dims = 11
-GP_model = train_GP_emulator(; dims=dims, data_path=data_path, f_err=0.8, n_train=2000, n_cv=2000, mean_f=250., kernel=kernel_SE_ndims, hparams_best=hparams_best, optimize_hparams=false, make_plots=true)
+GP_model = train_GP_emulator(; dims=dims, data_path=data_path, f_err=0.8, n_train=2000, n_cv=2000, mean_f=75., kernel=kernel_SE_ndims, hparams_best=hparams_best, optimize_hparams=false, make_plots=true)
