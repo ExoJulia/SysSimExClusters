@@ -7,8 +7,5 @@ Manifest.toml
 julia_types
 libcorbits.so
 profile*
-*.out
-observed_catalog.csv
-observed_catalog_stars.csv
-physical_catalog.csv
-physical_catalog_stars.csv
+examples/*.out
+examples/*.csv
