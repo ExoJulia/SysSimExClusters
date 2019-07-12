@@ -2,7 +2,7 @@
 
 include("GP_functions.jl")
 
-using Plots
+using PyPlot
 using Optim
 
 
@@ -11,7 +11,7 @@ using Optim
 
 function load_data(dims::Int64, data_path::String)
     data_table_original = CSV.read(joinpath(data_path,"Active_params_distances_table_best100000_every10.txt"), delim=" ", allowmissing=:none)
-    data_table_recomputed = CSV.read(joinpath(data_path,"Active_params_distances_recomputed_table_best100000_every10.txt"), delim=" ", allowmissing=:none)
+    data_table_recomputed = CSV.read(joinpath(data_path,"Active_params_distances_recomputed_table_best100000_every10.txt"), delim=" ", comment="#", allowmissing=:none)
     #data_table_recomputed = CSV.read("GP_files/Active_params_distances_table_best388529_every1.txt", delim=" ", allowmissing=:none)[1:388000,:]
 
     params_names = names(data_table_recomputed)[1:dims]
@@ -69,11 +69,24 @@ function train_GP_emulator(; dims::Int64, data_path::String, f_err::Float64=0.8,
     data = load_data(dims, data_path)
 
     if make_plots
+        #=
         fig = histogram([data[:dist_array_original] data[:dist_array]], fillalpha=0.5, xlabel="Distance", ylabel="Number of points", label=["Best distances during optimization", "Recomputed distances"])
         display(fig)
 
         fig1 = histogram(reshape(data[:dist_array], (div(length(data[:dist_array]), 5), 5)), fillalpha=0.5, xlabel="Distance", ylabel="Number of points")
         display(fig1)
+        =#
+
+        fig = figure()
+        hist([data[:dist_array_original], data[:dist_array]], bins=100, histtype="step", stacked=false, fill=false, label=["Best distances during optimization", "Recomputed distances"])
+        xlabel("Distance")
+        ylabel("Number of points")
+        legend()
+
+        fig1 = figure()
+        hist(reshape(data[:dist_array], (div(length(data[:dist_array]), 5), 5)), bins=100, histtype="step", stacked=false, fill=false)
+        xlabel("Distance")
+        ylabel("Number of points")
     end
 
 
@@ -91,8 +104,15 @@ function train_GP_emulator(; dims::Int64, data_path::String, f_err::Float64=0.8,
     xtrain, xcheck, ytrain, ycheck, ytrain_err, ycheck_err = split_data_training_cv(xdata, ydata, ydata_err; n_train=n_train)
 
     if make_plots
+        #=
         fig2 = histogram(ydata, fillalpha=0.5, xlabel="Distance - mean_f", ylabel="Number of points")
         display(fig2)
+        =#
+
+        fig2 = figure()
+        hist(ydata, bins=100, histtype="step", stacked=false, fill=false)
+        xlabel("Distance - mean_f")
+        ylabel("Number of points")
     end
 
 
@@ -124,6 +144,7 @@ function train_GP_emulator(; dims::Int64, data_path::String, f_err::Float64=0.8,
     ydiff_cv = mu_cv - ycheck
 
     if make_plots
+        #=
         fig3 = histogram([ydiff_train ydiff_cv], fillalpha=0.5, xlabel="Mean prediction - Data", ylabel="Number of points", label=["Training", "Cross-validation"])
 
         fig4 = scatter([ytrain ycheck], [mu_train mu_cv], markersize=1, xlabel="Data", ylabel="Mean prediction", label=["Training", "Cross-validation"])
@@ -135,6 +156,37 @@ function train_GP_emulator(; dims::Int64, data_path::String, f_err::Float64=0.8,
 
         fig3_6 = plot(fig3,fig4,fig5,fig6, layout=(2,2), guidefontsize=8, legend=true, legendfontsize=4)
         display(fig3_6)
+        =#
+
+        fig3 = figure()
+
+        subplot(2,2,1)
+        hist([ydiff_train, ydiff_cv], bins=100, histtype="step", stacked=false, fill=false, label=["Training", "Cross-validation"])
+        xlabel("Mean prediction - Data")
+        ylabel("Number of points")
+        legend()
+
+        subplot(2,2,2)
+        scatter(ytrain, mu_train, label="Training", s=1)
+        scatter(ycheck, mu_cv, label="Cross-validation", s=1)
+        plot(range(0, stop=maximum(ycheck), length=100), range(0, stop=maximum(ycheck), length=100), label="Perfect prediction")
+        xlabel("Data")
+        ylabel("Mean prediction")
+        legend()
+
+        subplot(2,2,3)
+        scatter(ydiff_train, stdv_train, label="Training", s=1)
+        scatter(ydiff_cv, stdv_cv, label="Cross-validation", s=1)
+        xlabel("Mean prediction - Data")
+        ylabel("Uncertainty of prediction")
+        legend()
+
+        subplot(2,2,4)
+        scatter(mu_train, stdv_train, label="Training", s=1)
+        scatter(mu_cv, stdv_cv, label="Cross-validation", s=1)
+        xlabel("Mean prediction")
+        ylabel("Uncertainty of prediction")
+        legend()
     end
 
     GP_model = Dict()
@@ -146,7 +198,8 @@ function train_GP_emulator(; dims::Int64, data_path::String, f_err::Float64=0.8,
     GP_model[:kernel] = kernel
     GP_model[:hparams_best] = hparams_best
     if make_plots
-        GP_model[:plots] = [fig, fig1, fig2, fig3, fig4, fig5, fig6, fig3_6]
+        #GP_model[:plots] = [fig, fig1, fig2, fig3, fig4, fig5, fig6, fig3_6]
+        GP_model[:plots] = [fig, fig1, fig2, fig3]
     end
 
     return GP_model
@@ -187,4 +240,4 @@ prior_bounds = nothing
 
 
 dims = 11
-GP_model = train_GP_emulator(; dims=dims, data_path=data_path, f_err=0.8, n_train=2000, n_cv=2000, mean_f=75., kernel=kernel_SE_ndims, hparams_best=hparams_best, optimize_hparams=false, make_plots=true)
+GP_model = train_GP_emulator(; dims=dims, data_path=data_path, f_err=0.8, n_train=2000, n_cv=2000, mean_f=75., kernel=kernel_SE_ndims, hparams_best=hparams_best, optimize_hparams=false, make_plots=false)
