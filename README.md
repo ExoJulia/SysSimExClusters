@@ -7,7 +7,8 @@ This repository provides a comprehensive model for Clustered Planetary Systems f
 ## How to use our Clustered model for studying exoplanetary system populations:
 
 We provide a large set of simulated catalogs from our models directly in this repository. We refer to a *physical catalog* as a set of intrinsic, physical planetary systems, and an *observed catalog* as a set of transiting and detected planet candidates that a Kepler-like mission might produce. If you simply wish to use these simulated catalogs as examples of our models, then no installation is required! Simply download any of these tables and use them for your own science.
-* Navigate to the "best_models/Clustered_P_R/tables/" directory.\*
+* Go to the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder.
+* Navigate into the "Clustered_P_R/"\* directory, and then into either the KS or AD subdirectories. (Use KS if you don't know the difference or have trouble deciding.) 
 * Download a "physical_catalogX.csv" file (X = an index/number) for a table including all the physical planets in a simulated catalog.
 * Download an "observed_catalogX.csv" file (X = an index/number) for a table including all the observed planets that a simulated Kepler mission would detect given the true planetary systems listed in "physical_catalogX.csv".
 
