@@ -1,6 +1,6 @@
 # SysSimExClusters
 
-This repository provides a comprehensive model for Clustered Planetary Systems for SysSim. The details of the specific models for exoplanetary systems are described in our paper (link to be provided).
+This repository provides a comprehensive model for Clustered Planetary Systems for SysSim. The details of the specific models for exoplanetary systems are described in our paper ([arXiv link to paper](https://arxiv.org/abs/1907.07773); it is currently in the referee stage).
 
 
 
