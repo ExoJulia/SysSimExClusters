@@ -44,7 +44,9 @@ function keep_planet_candidates_given_sim_param(planet_catalog::DataFrame; sim_p
     if recompute_radii
         for (i,kepid) in enumerate(planets_keep[:kepid]) # to replace the stellar and planetary radii in 'planets_keep' with the more reliable values as derived from the stellar properties in 'stellar_catalog'
             stellar_radii_new = stellar_catalog[stellar_catalog[:kepid] .== kepid, :radius][1]
+            stellar_mass = stellar_catalog[stellar_catalog[:kepid] .== kepid, :mass][1]
             planets_keep[i, :koi_srad] = stellar_radii_new
+            planets_keep[i, :koi_smass] = stellar_mass # to save stellar masses because for some reason, currently the stellar mass for planets after the first planet in multi-planet systems are set to nan
             planets_keep[i, :koi_prad] = (1 ./ExoplanetsSysSim.earth_radius)*stellar_radii_new*sqrt(planets_keep[i, :koi_depth]/(1e6))
         end
     end
@@ -58,8 +60,8 @@ end
 @time planets_cleaned = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog, recompute_radii=true)
 
 # If we want to write the cleaned planetary catalog and the stellar catalog to a csv file, keeping only the columns we need:
-#CSV.write("q1_q17_dr25_gaia_fgk_koi_cleaned.csv", planets_cleaned[[:kepid, :kepoi_name, :koi_disposition, :koi_pdisposition, :koi_score, :koi_period, :koi_duration, :koi_depth, :koi_prad, :koi_srad]])
-#CSV.write("q1_q17_dr25_gaia_fgk_cleaned.csv", stellar_catalog[[:kepid, :mass, :radius]])
+#CSV.write("q1_q17_dr25_gaia_fgk_koi_cleaned.csv", planets_cleaned[[:kepid, :kepoi_name, :koi_disposition, :koi_pdisposition, :koi_score, :koi_period, :koi_duration, :koi_depth, :koi_prad, :koi_steff, :koi_slogg, :koi_srad, :koi_smass]])
+#CSV.write("q1_q17_dr25_gaia_fgk_cleaned.csv", stellar_catalog[[:kepid, :mass, :radius, :teff]])
 
 
 
