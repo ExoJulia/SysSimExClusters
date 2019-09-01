@@ -94,13 +94,17 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam, incl_sys::Flo
                 asc_nodes[idx[i]], mean_anoms[idx[i]], incls[idx[i]] = asc_node, mean_anom, incl
             end
 
-            if test_stability(P, mass, star.mass, sim_param; ecc=ecc)
+            μ = mass./star.mass
+            a = map(P -> semimajor_axis(P, star.mass), P)
+            stats, pairs, ratios = AMD_stability(μ[idx], a[idx], ecc[idx], incls[idx])
+            #if test_stability(P, mass, star.mass, sim_param; ecc=ecc)
+            if all(stats .== :Stable)
                 found_stable_cluster = true
             end
         end # if found_good_periods
 
     end # while trying to make the cluster stable
-    #println("attempts for cluster: ", attempts_cluster)
+    println("attempts for cluster: ", attempts_cluster)
 
     if !found_stable_cluster
         #println("# Warning: Did not find a good set of sizes, masses, periods, eccentricities, and mutual inclinations for one cluster.")
