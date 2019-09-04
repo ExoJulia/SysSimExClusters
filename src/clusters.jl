@@ -10,3 +10,4 @@ include("distance.jl")
 
 include("mr_model/MRpredict.jl")
 include("catalog_simulation.jl")
+include("AMD_stability/amd_stability.jl")
