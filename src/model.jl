@@ -55,6 +55,7 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam, incl_sys::Flo
     omega = Array{Float64}(undef, n)
     asc_nodes = Array{Float64}(undef, n)
     mean_anoms = Array{Float64}(undef, n)
+    incls_mut = Array{Float64}(undef, n)
     incls = Array{Float64}(undef, n)
 
     found_stable_cluster = false # will be true if entire cluster is stable (given sizes/masses, periods, eccentricities, and mutual inclinations)
@@ -91,12 +92,12 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam, incl_sys::Flo
                 mean_anom = 2pi*rand()
                 incl = incl_mut != zero(incl_mut) ? acos(cos(incl_sys)*cos(incl_mut) + sin(incl_sys)*sin(incl_mut)*cos(asc_node)) : incl_sys
 
-                asc_nodes[idx[i]], mean_anoms[idx[i]], incls[idx[i]] = asc_node, mean_anom, incl
+                asc_nodes[idx[i]], mean_anoms[idx[i]], incls_mut[idx[i]], incls[idx[i]] = asc_node, mean_anom, incl_mut, incl
             end
 
             μ = mass./star.mass
             a = map(P -> semimajor_axis(P, star.mass), P)
-            stats, pairs, ratios = AMD_stability(μ[idx], a[idx], ecc[idx], incls[idx])
+            stats, pairs, ratios = AMD_stability(μ[idx], a[idx], ecc[idx], incls_mut[idx])
             #if test_stability(P, mass, star.mass, sim_param; ecc=ecc)
             if all(stats .== :Stable)
                 found_stable_cluster = true
