@@ -48,7 +48,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"max_period", 300.0)
     add_param_fixed(sim_param,"min_radius", 0.5*ExoplanetsSysSim.earth_radius)
     add_param_fixed(sim_param,"max_radius", 10.0*ExoplanetsSysSim.earth_radius)
-    add_param_fixed(sim_param,"break_radius", 2.0*ExoplanetsSysSim.earth_radius)
+    add_param_fixed(sim_param,"break_radius", 3.0*ExoplanetsSysSim.earth_radius)
 
     # Generate_num_planets_in_cluster currently use these for the inclination distribution:
     add_param_fixed(sim_param,"resonance_width", 0.05)
