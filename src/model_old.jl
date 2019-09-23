@@ -88,12 +88,6 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
     return (P, R, mass, ecc, omega)    # Note can also return earlier if only one planet in cluster or if fail to generate a good set of values
 end
 
-function generate_num_planets_in_cluster_poisson(s::Star, sim_param::SimParam)
-    lambda::Float64 = exp(get_real(sim_param, "log_rate_planets_per_cluster"))
-    max_planets_in_cluster::Int64 = get_int(sim_param, "max_planets_in_cluster")
-    return draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
-end
-
 function generate_num_clusters_poisson(s::Star, sim_param::SimParam)
     lambda::Float64 = exp(get_real(sim_param, "log_rate_clusters"))
     max_clusters_in_sys::Int64 = get_int(sim_param, "max_clusters_in_sys")
@@ -101,13 +95,43 @@ function generate_num_clusters_poisson(s::Star, sim_param::SimParam)
     #return ExoplanetsSysSim.generate_num_planets_poisson(lambda, max_clusters_in_sys) ##### Use this if setting max_clusters_in_sys > 20
 end
 
+function generate_num_clusters_ZTP(s::Star, sim_param::SimParam)
+    lambda::Float64 = exp(get_real(sim_param, "log_rate_clusters"))
+    max_clusters_in_sys::Int64 = get_int(sim_param, "max_clusters_in_sys")
+    return draw_truncated_poisson(lambda, min=1, max=max_clusters_in_sys, n=1)[1]
+end
+
+function generate_num_planets_in_cluster_poisson(s::Star, sim_param::SimParam)
+    lambda::Float64 = exp(get_real(sim_param, "log_rate_planets_per_cluster"))
+    max_planets_in_cluster::Int64 = get_int(sim_param, "max_planets_in_cluster")
+    return draw_truncated_poisson(lambda, min=0, max=max_planets_in_cluster, n=1)[1]
+end
+
+function generate_num_planets_in_cluster_ZTP(s::Star, sim_param::SimParam)
+    lambda::Float64 = exp(get_real(sim_param, "log_rate_planets_per_cluster"))
+    max_planets_in_cluster::Int64 = get_int(sim_param, "max_planets_in_cluster")
+    return draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
+end
+
 function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)  # TODO: Make this function work and test before using for science
     # Load functions to use for drawing parameters:
+    if haskey(sim_param, "f_stars_with_planets_attempted")
+        f_stars_with_planets_attempted = get_real(sim_param, "f_stars_with_planets_attempted")
+        @assert 0<=f_stars_with_planets_attempted<=1
+    else
+        f_stars_with_planets_attempted = 1.
+    end
     generate_num_clusters = get_function(sim_param, "generate_num_clusters")
     generate_num_planets_in_cluster = get_function(sim_param, "generate_num_planets_in_cluster")
     power_law_P = get_real(sim_param, "power_law_P")
     min_period = get_real(sim_param, "min_period")
     max_period = get_real(sim_param, "max_period")
+
+    # Decide whether to assign a planetary system to the star at all:
+    if rand() > f_stars_with_planets_attempted
+        #println("Star not assigned a planetary system.")
+        return PlanetarySystem(star)
+    end
 
     # Generate a set of periods, planet radii, and planet masses:
     attempt_system = 0

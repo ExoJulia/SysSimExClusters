@@ -53,11 +53,10 @@ active_param_true, weights, target_fitness, target_fitness_std = compute_weights
 
 ##### To draw the initial values of the active parameters randomly within a search range:
 
-transformed_indices = [8,9]
-active_param_keys = ["f_high_incl", "log_rate_clusters", "log_rate_planets_per_cluster", "power_law_P", "power_law_r1", "power_law_r2", "sigma_hk", "sigma_incl", "sigma_incl_near_mmr", "sigma_log_radius_in_cluster", "sigma_logperiod_per_pl_in_cluster"]
-    # ["break_radius", "f_high_incl", "log_rate_clusters", "log_rate_planets_per_cluster", "mr_power_index", "num_mutual_hill_radii", "power_law_P", "power_law_r1", "power_law_r2", "sigma_hk", "sigma_incl", "sigma_incl_near_mmr", "sigma_log_radius_in_cluster", "sigma_logperiod_per_pl_in_cluster"]
-active_params_box = [(0., 1.), (log(0.5), log(5.)), (log(0.5), log(5.)), (-2., 1.), (-6., 0.), (-6., 0.), (0., 0.1), (0., 1.), (0., 1.), (0., 0.5), (0., 0.3)] #search ranges for all of the active parameters
-transformed_triangle = [[0., 0.], [90., 90.], [90., 0.]] # vertices (x,y) of the triangle for the transformed params
+transformed_indices = [9,10]
+active_param_keys = ["f_high_incl", "f_stars_with_planets_attempted", "log_rate_clusters", "log_rate_planets_per_cluster", "power_law_P", "power_law_r1", "power_law_r2", "sigma_hk", "sigma_incl", "sigma_incl_near_mmr", "sigma_log_radius_in_cluster", "sigma_logperiod_per_pl_in_cluster"]
+active_params_box = [(0., 1.), (0., 1.), (log(0.5), log(5.)), (log(0.5), log(5.)), (-2., 1.), (-6., 0.), (-6., 0.), (0., 0.1), (0., 1.), (0., 1.), (0., 0.5), (0., 0.3)] #search ranges for all of the active parameters
+transformed_triangle = [[0., 0.], [30., 30.], [30., 0.]] # vertices (x,y) of the triangle for the transformed params
 
 # To randomly draw (uniformly) a value for each active model parameter within its search range:
 

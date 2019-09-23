@@ -105,19 +105,13 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam, incl_sys::Flo
         end # if found_good_periods
 
     end # while trying to make the cluster stable
-    println("attempts for cluster: ", attempts_cluster)
+    #println("attempts for cluster: ", attempts_cluster)
 
     if !found_stable_cluster
         #println("# Warning: Did not find a good set of sizes, masses, periods, eccentricities, and mutual inclinations for one cluster.")
         return (fill(NaN,n), R, mass, ecc, omega, asc_nodes, mean_anoms, incls)  # Return NaNs for periods to indicate failed
     end
     return (P, R, mass, ecc, omega, asc_nodes, mean_anoms, incls) # NOTE: can also return earlier if only one planet in cluster or if fail to generate a good set of values; also, the planets are NOT sorted at this point
-end
-
-function generate_num_planets_in_cluster_poisson(s::Star, sim_param::SimParam)
-    lambda::Float64 = exp(get_real(sim_param, "log_rate_planets_per_cluster"))
-    max_planets_in_cluster::Int64 = get_int(sim_param, "max_planets_in_cluster")
-    return draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
 end
 
 function generate_num_clusters_poisson(s::Star, sim_param::SimParam)
@@ -127,9 +121,33 @@ function generate_num_clusters_poisson(s::Star, sim_param::SimParam)
     #return ExoplanetsSysSim.generate_num_planets_poisson(lambda, max_clusters_in_sys) ##### Use this if setting max_clusters_in_sys > 20
 end
 
+function generate_num_clusters_ZTP(s::Star, sim_param::SimParam)
+    lambda::Float64 = exp(get_real(sim_param, "log_rate_clusters"))
+    max_clusters_in_sys::Int64 = get_int(sim_param, "max_clusters_in_sys")
+    return draw_truncated_poisson(lambda, min=1, max=max_clusters_in_sys, n=1)[1]
+end
+
+function generate_num_planets_in_cluster_poisson(s::Star, sim_param::SimParam)
+    lambda::Float64 = exp(get_real(sim_param, "log_rate_planets_per_cluster"))
+    max_planets_in_cluster::Int64 = get_int(sim_param, "max_planets_in_cluster")
+    return draw_truncated_poisson(lambda, min=0, max=max_planets_in_cluster, n=1)[1]
+end
+
+function generate_num_planets_in_cluster_ZTP(s::Star, sim_param::SimParam)
+    lambda::Float64 = exp(get_real(sim_param, "log_rate_planets_per_cluster"))
+    max_planets_in_cluster::Int64 = get_int(sim_param, "max_planets_in_cluster")
+    return draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
+end
+
 function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)
 
     # Load functions and model parameters for drawing planet properties:
+    if haskey(sim_param, "f_stars_with_planets_attempted")
+        f_stars_with_planets_attempted = get_real(sim_param, "f_stars_with_planets_attempted")
+        @assert 0<=f_stars_with_planets_attempted<=1
+    else
+        f_stars_with_planets_attempted = 1.
+    end
     generate_num_clusters = get_function(sim_param, "generate_num_clusters")
     generate_num_planets_in_cluster = get_function(sim_param, "generate_num_planets_in_cluster")
     power_law_P = get_real(sim_param, "power_law_P")
@@ -141,6 +159,12 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     max_incl_sys = get_real(sim_param, "max_incl_sys")
     f_high_incl = get_real(sim_param, "f_high_incl")
     sigma_incl_use = rand() < f_high_incl ? max(sigma_incl, sigma_incl_near_mmr) : min(sigma_incl, sigma_incl_near_mmr)
+
+    # Decide whether to assign a planetary system to the star at all:
+    if rand() > f_stars_with_planets_attempted
+        #println("Star not assigned a planetary system.")
+        return PlanetarySystem(star)
+    end
 
     # Assign a reference plane for the system:
     incl_sys = acos(cos(max_incl_sys*pi/180)*rand()) # acos(rand()) for isotropic distribution of system inclinations; acos(cos(X*pi/180)*rand()) gives angles from X (deg) to 90 (deg)
@@ -282,137 +306,4 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     end
 
     return PlanetarySystem(star, pl, orbit)
-end
-
-function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)
-    # Load functions to use for drawing parameters:
-    lambda::Float64 = exp(get_real(sim_param, "log_rate_clusters"))
-    max_clusters_in_sys::Int64 = get_int(sim_param, "max_clusters_in_sys")
-
-    generate_periods = get_function(sim_param, "generate_periods")
-    generate_sizes = get_function(sim_param, "generate_sizes")
-    generate_planet_mass_from_radius = get_function(sim_param, "generate_planet_mass_from_radius")
-    generate_e_omega = get_function(sim_param, "generate_e_omega")
-    sigma_ecc::Float64 = haskey(sim_param, "sigma_hk") ? get_real(sim_param, "sigma_hk") : 0.0
-
-    # Generate a set of periods, planet radii, and planet masses:
-    attempts_system = 0
-    max_attempts_system = 100 # Note: Should this be a parameter?
-    local num_pl, Plist, Rlist, masslist, ecclist, omegalist
-    valid_system = false
-    while !valid_system && attempts_system < max_attempts_system
-
-        num_pl = ExoplanetsSysSim.generate_num_planets_poisson(lambda, max_clusters_in_sys)
-
-        if num_pl==0
-            valid_system = true
-            return PlanetarySystem(star)
-        end
-
-        if num_pl==1
-            valid_system = true
-            Plist = generate_periods(star, sim_param)
-            Rlist = generate_sizes(star, sim_param)
-            masslist = [generate_planet_mass_from_radius(Rlist[1], sim_param)]
-            eccentricity::Float64, omega_e::Float64 = generate_e_omega(sigma_ecc)::Tuple{Float64,Float64}
-            ecclist, omegalist = [eccentricity], [omega_e]
-        elseif num_pl>1
-            Rlist::Array{Float64,1} = generate_sizes(star,sim_param, num_pl=num_pl)
-            masslist::Array{Float64,1} = map(r -> generate_planet_mass_from_radius(r, sim_param), Rlist)
-
-            ecclist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-            omegalist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-            for i in 1:num_pl
-                (ecclist[i], omegalist[i]) = generate_e_omega(sigma_ecc)::Tuple{Float64,Float64}
-            end
-
-            Plist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-
-            found_good_periods = false
-            attempts = 0
-            max_attempts = 100 # Note: Should this be a parameter?
-            while !found_good_periods && attempts < max_attempts
-                attempts += 1
-                Plist[1:num_pl] = generate_periods(star, sim_param; num_pl=num_pl)
-                if test_stability(Plist, masslist, star.mass, sim_param; ecc=ecclist)
-                    found_good_periods = true
-                end
-            end # while trying to draw periods
-
-            #println("attempts for periods: ", attempts)
-
-            if !found_good_periods
-                #println("# Warning: Did not find a good set of periods, given sizes and masses for system. Re-attempting entire system...")
-                attempts_system += 1
-            else
-                valid_system = true
-            end
-        end
-
-    end # while !valid_system...
-
-    if attempts_system > 0
-        #println("attempts_system: ", attempts_system)
-        if attempts_system == max_attempts_system
-            println("Failed to generate a valid system after ", attempts_system, " attempts; returning just the star.")
-            return PlanetarySystem(star)
-        end
-    end
-
-    # To print out periods, radii, and masses (for troubleshooting):
-    #=
-    i_sort = sortperm(Plist)
-    Plist_sorted = sort(Plist)
-    if length(Plist) > 1
-        ratio_list = Plist_sorted[2:end]./Plist_sorted[1:end-1]
-        if minimum(ratio_list) < 1.1
-            println("P: ", Plist_sorted)
-            println(Rlist[i_sort])
-            println(masslist[i_sort])
-            println(ecclist[i_sort])
-            println(omegalist[i_sort])
-        end
-    end
-    =#
-
-    # Now assign orbits with given periods, sizes, and masses.
-    sigma_incl = deg2rad(get_real(sim_param, "sigma_incl"))
-    sigma_incl_near_mmr = deg2rad(get_real(sim_param, "sigma_incl_near_mmr"))
-    max_incl_sys = get_real(sim_param, "max_incl_sys")
-    f_high_incl = get_real(sim_param, "f_high_incl")
-
-    sigma_incl_use = rand() < f_high_incl ? max(sigma_incl, sigma_incl_near_mmr) : min(sigma_incl, sigma_incl_near_mmr)
-
-    pl = Array{Planet}(undef, num_pl)
-    orbit = Array{Orbit}(undef, num_pl)
-    incl_sys = acos(cos(max_incl_sys*pi/180)*rand()) #acos(rand()) for isotropic distribution of system inclinations; acos(cos(X*pi/180)*rand()) gives angles from X (deg) to 90 (deg)
-    idx = sortperm(Plist)       # TODO OPT: Check to see if sorting is significant time sink.  If so, could reduce redundant sortperm
-    is_near_resonance = calc_if_near_resonance(Plist[idx], sim_param)
-    for i in 1:num_pl
-        #=
-        if haskey(sim_param,"sigma_hk_one") && haskey(sim_param, "sigma_hk_multi")
-            sigma_ecc = num_pl == 1 ? get_real(sim_param, "sigma_hk_one") : get_real(sim_param, "sigma_hk_multi")
-        end
-        =#
-
-        #####sigma_incl_use = is_near_resonance[i] ? sigma_incl_near_mmr : sigma_incl
-        incl_mut = sigma_incl_use*sqrt(randn()^2+randn()^2) # rand(Distributions.Rayleigh(sigma_incl_use))
-        #
-        if is_near_resonance[i]
-            incl_mut = min(sigma_incl, sigma_incl_near_mmr)*sqrt(randn()^2+randn()^2)
-        end
-        #
-        asc_node = 2pi*rand()
-        mean_anom = 2pi*rand()
-        incl = incl_mut!=zero(incl_mut) ? acos(cos(incl_sys)*cos(incl_mut) + sin(incl_sys)*sin(incl_mut)*cos(asc_node)) : incl_sys
-        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], incl, omegalist[idx[i]], asc_node, mean_anom)
-        pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]])
-    end # for i in 1:num_pl
-
-    return PlanetarySystem(star, pl, orbit)
-end
-
-function test_generate_planetary_system_clustered() # TODO: Update to test to not reply on generate_kepler_physical_catalog
-    sim_param = setup_sim_param_model()
-    cat_phys = generate_kepler_physical_catalog(sim_param)
 end
