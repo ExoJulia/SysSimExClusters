@@ -65,6 +65,17 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam, incl_sys::Flo
         attempts_cluster += 1
 
         # Draw unscaled periods first, checking for mutual Hill separation stability assuming circular and coplanar orbits
+        P = zeros(n)
+        for i in 1:n # Draw periods one at a time
+            if any(isnan.(P))
+                P[i:end] .= NaN
+                println("Cannot fit any more planets in cluster.")
+                break
+            end
+            P[i] = draw_period_lognormal_allowed_regions(P[1:i-1], mass[1:i-1], star.mass, sim_param; μ=log_mean_P, σ=n*sigma_logperiod_per_pl_in_cluster, x_min=1/sqrt(max_period_ratio), x_max=sqrt(max_period_ratio))
+        end
+        found_good_periods = any(isnan.(P)) ? false : true
+        #=
         found_good_periods = false # will be true if entire cluster is likely to be stable assuming circular and coplanar orbits (given sizes/masses and periods)
         attempts_periods = 0
         while !found_good_periods && attempts_periods < max_attempts
@@ -74,6 +85,7 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam, incl_sys::Flo
                 found_good_periods = true
             end
         end # while trying to draw periods
+        =#
 
         # Draw eccentricities and mutual inclinations (configure orbits), checking for stability of the entire cluster:
         if found_good_periods

@@ -62,12 +62,25 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
     sigma_logperiod_per_pl_in_cluster = get_real(sim_param, "sigma_logperiod_per_pl_in_cluster")
     min_period = get_real(sim_param, "min_period")
     max_period = get_real(sim_param, "max_period")
+    max_period_ratio = max_period/min_period
     log_mean_P = 0.0 # log(generate_periods_power_law(star,sim_param))
+    local P
+    #
+    P = zeros(n)
+    for i in 1:n # Draw periods one at a time
+        if any(isnan.(P))
+            P[i:end] .= NaN
+            println("Cannot fit any more planets in cluster; returning planets that did fit.")
+            break
+        end
+        P[i] = draw_period_lognormal_allowed_regions(P[1:i-1], mass[1:i-1], star.mass, sim_param; μ=log_mean_P, σ=n*sigma_logperiod_per_pl_in_cluster, x_min=1/sqrt(max_period_ratio), x_max=sqrt(max_period_ratio), ecc=ecc[1:i-1])
+    end
+    #
+
+    #=
     # Note: Currently, drawing all periods within a cluster at once and either keeping or rejecting the whole cluster
     #       Should we instead draw periods one at a time?
-    max_period_ratio = max_period/min_period
     Pdist = Truncated(LogNormal(log_mean_P,sigma_logperiod_per_pl_in_cluster*n), 1/sqrt(max_period_ratio), sqrt(max_period_ratio)) #Truncated unscaled period distribution to ensure that the cluster can fit in the period range [min_period, max_period] after scaling by a period scale
-    local P
     found_good_periods = false
     attempts = 0
     max_attempts = 100  # Note: Should this be a parameter?
@@ -78,13 +91,14 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
             found_good_periods = true
         end
     end # while trying to draw periods
-
     #println("attempts for cluster: ", attempts)
 
     if !found_good_periods
         #println("# Warning: Did not find a good set of periods, sizes and masses for one cluster.")
         return (fill(NaN,n), R, mass, ecc, omega)  # Return NaNs for periods to indicate failed
     end
+    =#
+
     return (P, R, mass, ecc, omega)    # Note can also return earlier if only one planet in cluster or if fail to generate a good set of values
 end
 
