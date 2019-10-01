@@ -29,8 +29,9 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     # For generating planetary system properties:
     add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered) # For Non-clustered model: "generate_planetary_system_non_clustered"
 
-    add_param_fixed(sim_param,"generate_num_clusters", generate_num_clusters_poisson)
-    add_param_fixed(sim_param,"generate_num_planets_in_cluster", generate_num_planets_in_cluster_poisson)
+    add_param_active(sim_param,"f_stars_with_planets_attempted", 1.)
+    add_param_fixed(sim_param,"generate_num_clusters", generate_num_clusters_ZTP)
+    add_param_fixed(sim_param,"generate_num_planets_in_cluster", generate_num_planets_in_cluster_ZTP)
     add_param_active(sim_param,"log_rate_clusters", log(1.6))
     add_param_fixed(sim_param,"max_clusters_in_sys", 10)
     add_param_active(sim_param,"log_rate_planets_per_cluster", log(1.6))
@@ -47,7 +48,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"max_period", 300.0)
     add_param_fixed(sim_param,"min_radius", 0.5*ExoplanetsSysSim.earth_radius)
     add_param_fixed(sim_param,"max_radius", 10.0*ExoplanetsSysSim.earth_radius)
-    add_param_fixed(sim_param,"break_radius", 2.0*ExoplanetsSysSim.earth_radius)
+    add_param_fixed(sim_param,"break_radius", 3.0*ExoplanetsSysSim.earth_radius)
 
     # Generate_num_planets_in_cluster currently use these for the inclination distribution:
     add_param_fixed(sim_param,"resonance_width", 0.05)
@@ -100,6 +101,7 @@ function write_model_params(f, sim_param::SimParam)
     # This function writes all the model parameters to a file f as a header
     println(f, "# num_targets_sim_pass_one: ", get_int(sim_param,"num_targets_sim_pass_one"))
     println(f, "# max_incl_sys: ", get_real(sim_param,"max_incl_sys"))
+    println(f, "# f_stars_with_planets_attempted: ", get_real(sim_param,"f_stars_with_planets_attempted"))
     println(f, "# log_rate_clusters: ", get_real(sim_param,"log_rate_clusters"))
     println(f, "# max_clusters_in_sys: ", get_int(sim_param,"max_clusters_in_sys"))
     if string(get_function(sim_param,"generate_planetary_system")) == "generate_planetary_system_clustered"
