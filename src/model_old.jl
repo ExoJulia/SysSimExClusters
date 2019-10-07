@@ -65,19 +65,23 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
     max_period_ratio = max_period/min_period
     log_mean_P = 0.0 # log(generate_periods_power_law(star,sim_param))
     local P
-    #
+
+    # New sampling:
     P = zeros(n)
     for i in 1:n # Draw periods one at a time
         if any(isnan.(P))
             P[i:end] .= NaN
-            println("Cannot fit any more planets in cluster; returning planets that did fit.")
+            #println("Cannot fit any more planets in cluster; returning planets that did fit.")
             break
         end
-        P[i] = draw_period_lognormal_allowed_regions(P[1:i-1], mass[1:i-1], star.mass, sim_param; μ=log_mean_P, σ=n*sigma_logperiod_per_pl_in_cluster, x_min=1/sqrt(max_period_ratio), x_max=sqrt(max_period_ratio), ecc=ecc[1:i-1])
+        P[i] = draw_period_lognormal_allowed_regions_mutualHill(P[1:i-1], mass[1:i-1], mass[i], star.mass, sim_param; μ=log_mean_P, σ=n*sigma_logperiod_per_pl_in_cluster, x_min=1/sqrt(max_period_ratio), x_max=sqrt(max_period_ratio), ecc=ecc[1:i-1], insert_pl_ecc=ecc[i])
     end
+    #if !test_stability(P, mass, star.mass, sim_param; ecc=ecc) # This should never happen if our unscaled period draws are correct
+        #println("WHAT: ", P)
+    #end
     #
 
-    #=
+    #= Old rejection sampling:
     # Note: Currently, drawing all periods within a cluster at once and either keeping or rejecting the whole cluster
     #       Should we instead draw periods one at a time?
     Pdist = Truncated(LogNormal(log_mean_P,sigma_logperiod_per_pl_in_cluster*n), 1/sqrt(max_period_ratio), sqrt(max_period_ratio)) #Truncated unscaled period distribution to ensure that the cluster can fit in the period range [min_period, max_period] after scaling by a period scale
@@ -157,6 +161,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         # First, generate number of clusters (to attempt) and planets (to attempt) in each cluster:
         num_clusters = generate_num_clusters(star, sim_param)::Int64
         num_pl_in_cluster = map(x -> generate_num_planets_in_cluster(star, sim_param)::Int64, 1:num_clusters)
+        num_pl_in_cluster_true = zeros(Int64, num_clusters) # true numbers of planets per cluster, after subtracting the number of NaNs
         num_pl = sum(num_pl_in_cluster)
 
         #println("num_clusters: ", num_clusters, " ; num_pl_in_clusters", num_pl_in_cluster)
@@ -176,10 +181,33 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         pl_start = 1
         pl_stop = 0
         for c in 1:num_clusters
-            pl_stop += num_pl_in_cluster[c]
-            clusteridlist[pl_start:pl_stop] = ones(Int64, num_pl_in_cluster[c])*c
-            Plist_tmp::Array{Float64,1}, Rlist_tmp::Array{Float64,1}, masslist_tmp::Array{Float64,1}, ecclist_tmp::Array{Float64,1}, omegalist_tmp::Array{Float64,1} = generate_planet_periods_sizes_masses_eccs_in_cluster(star, sim_param, n=num_pl_in_cluster[c])
+            n = num_pl_in_cluster[c]
+            pl_stop += n
+            clusteridlist[pl_start:pl_stop] = ones(Int64, n)*c
+            Plist_tmp::Array{Float64,1}, Rlist_tmp::Array{Float64,1}, masslist_tmp::Array{Float64,1}, ecclist_tmp::Array{Float64,1}, omegalist_tmp::Array{Float64,1} = generate_planet_periods_sizes_masses_eccs_in_cluster(star, sim_param, n=n)
             Rlist[pl_start:pl_stop], masslist[pl_start:pl_stop], ecclist[pl_start:pl_stop], omegalist[pl_start:pl_stop] = Rlist_tmp, masslist_tmp, ecclist_tmp, omegalist_tmp
+
+            # New sampling:
+            idx = .!isnan.(Plist[1:pl_stop-n])
+            idy = .!isnan.(Plist_tmp)
+            if length(idx) > 0
+                period_scale = draw_periodscale_power_law_allowed_regions_mutualHill(num_pl_in_cluster_true[1:c-1], Plist[1:pl_stop-n][idx], masslist[1:pl_stop-n][idx], Plist_tmp[idy], masslist_tmp[idy], star.mass, sim_param; x0=min_period/minimum(Plist_tmp[idy]), x1=max_period/maximum(Plist_tmp[idy]), α=power_law_P, ecc_cl=ecclist[1:pl_stop-n][idx], insert_cl_ecc=ecclist_tmp[idy])
+            else
+                period_scale = draw_power_law(power_law_P, min_period/minimum(Plist_tmp[idy]), max_period/maximum(Plist_tmp[idy]), 1)[1]
+            end
+            Plist[pl_start:pl_stop] = Plist_tmp .* period_scale
+            if isnan(period_scale)
+                Plist[pl_stop:end] .= NaN
+                #println("Cannot fit cluster into system; returning clusters that did fit.")
+                break
+            end
+            #if !test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param; ecc=view(ecclist,1:pl_stop)) # This should never happen if our period scale draws are correct
+                #println("WHAT 2")
+                #Plist[pl_start:pl_stop] .= NaN
+            #end
+            #
+
+            #= Old rejection sampling:
             valid_cluster = !any(isnan.(Plist_tmp)) #should this be looking for nans in Plist or Plist_tmp? Was Plist but I think it should be Plist_tmp!
             valid_period_scale = false
             attempt_period_scale = 0
@@ -187,7 +215,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             while !valid_period_scale && attempt_period_scale<max_attempts_period_scale && valid_cluster
                 attempt_period_scale += 1
 
-                period_scale::Array{Float64,1} = draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)
+                period_scale::Float64 = draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)[1]
                 #Note: this ensures that the minimum and maximum periods will be in the range [min_period, max_period]
                 #Warning: not sure about the behaviour when min_period/minimum(Plist_tmp) > max_period/maximum(Plist_tmp) (i.e. when the cluster cannot fit in the given range)?
                 #TODO OPT: could draw period_scale more efficiently by computing the allowed regions in [min_period, max_period] given the previous cluster draws
@@ -207,7 +235,10 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             if !valid_period_scale
                 Plist[pl_start:pl_stop] .= NaN
             end
-            pl_start += num_pl_in_cluster[c]
+            =#
+
+            num_pl_in_cluster_true[c] = sum(.!isnan.(Plist[pl_start:pl_stop]))
+            pl_start += n
         end # for c in 1:num_clusters
         isnanPlist::Array{Bool,1} = isnan.(Plist::Array{Float64,1})
         if any(isnanPlist)  # If any loop failed to generate valid planets, it should set a NaN in the period list
