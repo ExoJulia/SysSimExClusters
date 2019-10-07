@@ -190,10 +190,10 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             # New sampling:
             idx = .!isnan.(Plist[1:pl_stop-n])
             idy = .!isnan.(Plist_tmp)
-            if length(idx) > 0
+            if any(idy)
                 period_scale = draw_periodscale_power_law_allowed_regions_mutualHill(num_pl_in_cluster_true[1:c-1], Plist[1:pl_stop-n][idx], masslist[1:pl_stop-n][idx], Plist_tmp[idy], masslist_tmp[idy], star.mass, sim_param; x0=min_period/minimum(Plist_tmp[idy]), x1=max_period/maximum(Plist_tmp[idy]), α=power_law_P, ecc_cl=ecclist[1:pl_stop-n][idx], insert_cl_ecc=ecclist_tmp[idy])
-            else
-                period_scale = draw_power_law(power_law_P, min_period/minimum(Plist_tmp[idy]), max_period/maximum(Plist_tmp[idy]), 1)[1]
+            else # void cluster; all NaNs
+                period_scale = NaN
             end
             Plist[pl_start:pl_stop] = Plist_tmp .* period_scale
             if isnan(period_scale)
