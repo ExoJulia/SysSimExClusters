@@ -27,6 +27,10 @@ In each of these files, the header contains all the parameters of the model used
 ```
 git clone git@github.com:ExoJulia/SysSimExClusters.git
 ```
+* Switch to the "He_Ford_Ragozzine_2019" branch of the repository.
+```
+git checkout He_Ford_Ragozzine_2019
+```
 
 ### Usage:
 
