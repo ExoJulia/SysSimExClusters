@@ -61,7 +61,7 @@ end
 
 # If we want to write the cleaned planetary catalog and the stellar catalog to a csv file, keeping only the columns we need:
 #CSV.write("q1_q17_dr25_gaia_fgk_koi_cleaned.csv", planets_cleaned[[:kepid, :kepoi_name, :koi_disposition, :koi_pdisposition, :koi_score, :koi_period, :koi_duration, :koi_depth, :koi_prad, :koi_steff, :koi_slogg, :koi_srad, :koi_smass]])
-#CSV.write("q1_q17_dr25_gaia_fgk_cleaned.csv", stellar_catalog[[:kepid, :mass, :radius, :teff]])
+#CSV.write("q1_q17_dr25_gaia_fgk_cleaned.csv", stellar_catalog[[:kepid, :mass, :radius, :teff, :bp_rp, :rrmscdpp04p5]])
 
 
 
@@ -69,87 +69,121 @@ end
 
 ##### To compute arrays of the observables (multiplicities, periods, period ratios, transit durations, transit depths, period-normalized transit duration ratios (xi), and transit depth ratios) from the remaining sample of planets:
 
-KOI_systems = [x[1:6] for x in planets_cleaned[:kepoi_name]]
-checked_bools = zeros(size(planets_cleaned,1)) #0's denote KOI that were not checked yet; 1's denote already checked KOI
+"""
+    function calc_summary_stats_Kepler(stellar_catalog, planets_cleaned)
 
-M_confirmed = Int64[] #list to be filled with the planet multiplicities of the systems
-R_confirmed = Float64[] #list to be filled with period ratios of adjacent planet pairs
-xi_confirmed = Float64[] #list to be filled with the period-normalized transit duration ratios of adjacent planet pairs
-xi_non_mmr_confirmed = Float64[] #list to be filled with the period-normalized transit duration ratios of adjacent planet pairs not near any resonances
-xi_near_mmr_confirmed = Float64[] #list to be filled with the period-normalized transit duration ratios of adjacent planet pairs near a resonance
-D_ratio_confirmed = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs
-P_confirmed = planets_cleaned[:koi_period] #array of the periods (days)
-P_confirmed = collect(skipmissing(P_confirmed))
-t_D_confirmed = planets_cleaned[:koi_duration] #array of the transit durations (hrs)
-t_D_confirmed = collect(skipmissing(t_D_confirmed))
-D_confirmed = planets_cleaned[:koi_depth]/(1e6) #array of the transit depths (fraction)
-D_confirmed = D_confirmed[ismissing.(D_confirmed) .== false] #to get rid of NA values
+Compute the summary statistics of a Kepler planet catalog and compile them into dictionary (in a `CatalogSummaryStatistics` object).
 
-D_above_confirmed = Float64[] #list to be filled with the transit depths of planets above the photoevaporation boundary in Carrera et al 2018
-D_below_confirmed = Float64[] #list to be filled with the transit depths of planets below the boundary
-D_ratio_above_confirmed = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs, both above the boundary
-D_ratio_below_confirmed = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs, both below the boundary
-D_ratio_across_confirmed = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs, across the boundary
+# Arguments:
+- `stellar_catalog::DataFrame`: table of target stars.
+- `planets_cleaned::DataFrame`: table of planet candidates around the stars in `stellar_catalog`.
 
-for i in 1:length(KOI_systems)
-    if checked_bools[i] == 0 #if the KOI has not been checked (included while looking at another planet in the same system)
-        system_i = (1:length(KOI_systems))[KOI_systems .== KOI_systems[i]]
-        checked_bools[system_i] .= 1
+# Returns:
+A `CatalogSummaryStatistics` object, where the `stat` field is a dictionary containing the summary statistics.
+"""
+function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::DataFrame)
+    KOI_systems = [x[1:6] for x in planets_cleaned[:kepoi_name]]
+    checked_bools = zeros(size(planets_cleaned,1)) #0's denote KOI that were not checked yet; 1's denote already checked KOI
 
-        #To get the periods and transit durations in this system:
-        system_P = planets_cleaned[:koi_period][system_i] #periods of all the planets in this system
-        system_t_D = planets_cleaned[:koi_duration][system_i] #transit durations of all the planets in this system
-        system_D = planets_cleaned[:koi_depth][system_i] #transit depths (in ppm) of all the planets in this system
-        system_radii = planets_cleaned[:koi_prad][system_i] #radii of all the planets in this system
-        system_sort_i = sortperm(system_P) #indices that would sort the periods of the planets in this system
-        system_P = system_P[system_sort_i] #periods of all the planets in this system, sorted
-        system_t_D = system_t_D[system_sort_i] #transit durations of all the planets in this system, sorted by period
-        system_D = system_D[system_sort_i]/(1e6) #transit depths of all the planets in this system, sorted by period
-        system_radii = system_radii[system_sort_i] #radii of all the planets in this system, sorted by period
+    M_obs = Int64[] #list to be filled with the planet multiplicities of the systems
+    pratios = Float64[] #list to be filled with period ratios of adjacent planet pairs
+    xis = Float64[] #list to be filled with the period-normalized transit duration ratios of adjacent planet pairs
+    xis_nonmmr = Float64[] #list to be filled with the period-normalized transit duration ratios of adjacent planet pairs not near any resonances
+    xis_mmr = Float64[] #list to be filled with the period-normalized transit duration ratios of adjacent planet pairs near a resonance
+    depthratios = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs
+    periods = collect(skipmissing(planets_cleaned[:koi_period])) #array of the periods (days)
+    durations = collect(skipmissing(planets_cleaned[:koi_duration])) #array of the transit durations (hrs)
+    depths = collect(skipmissing(planets_cleaned[:koi_depth]./(1e6))) #array of the transit depths (fraction)
 
-        #To count the total number of planets in this system:
-        push!(M_confirmed, length(system_P))
+    depths_above = Float64[] #list to be filled with the transit depths of planets above the photoevaporation boundary in Carrera et al 2018
+    depths_below = Float64[] #list to be filled with the transit depths of planets below the boundary
+    depthratios_above = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs, both above the boundary
+    depthratios_below = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs, both below the boundary
+    depthratios_across = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs, across the boundary
 
-        #To compute the period ratios, period-normalized transit duration ratios, and transit depth ratios in this system:
-        system_R = system_P[2:end] ./ system_P[1:end-1] #period ratios of all the adjacent planet pairs in this system
-        system_D_ratio = system_D[2:end] ./ system_D[1:end-1] #transit depth ratios of all the adjacent planet pairs in this system
-        system_xi = (system_t_D[1:end-1] ./ system_t_D[2:end]) .* (system_R .^(1//3)) #period-normalized transit duration ratios of all the adjacent planet pairs in this system
+    for i in 1:length(KOI_systems)
+        if checked_bools[i] == 0 #if the KOI has not been checked (included while looking at another planet in the same system)
+            system_i = (1:length(KOI_systems))[KOI_systems .== KOI_systems[i]]
+            checked_bools[system_i] .= 1
 
-        append!(R_confirmed, system_R)
-        append!(D_ratio_confirmed, system_D_ratio)
-        append!(xi_confirmed, system_xi)
-        for (j,period_ratio) in enumerate(system_R)
-            if is_period_ratio_near_resonance(period_ratio, sim_param)
-                append!(xi_near_mmr_confirmed, system_xi[j])
-            else
-                append!(xi_non_mmr_confirmed, system_xi[j])
+            #To get the periods and transit durations in this system:
+            system_P = planets_cleaned[:koi_period][system_i] #periods of all the planets in this system
+            system_dur = planets_cleaned[:koi_duration][system_i] #transit durations of all the planets in this system
+            system_dep = planets_cleaned[:koi_depth][system_i] #transit depths (in ppm) of all the planets in this system
+            system_radii = planets_cleaned[:koi_prad][system_i] #radii of all the planets in this system
+            system_sort_i = sortperm(system_P) #indices that would sort the periods of the planets in this system
+            system_P = system_P[system_sort_i] #periods of all the planets in this system, sorted
+            system_dur = system_dur[system_sort_i] #transit durations of all the planets in this system, sorted by period
+            system_dep = system_dep[system_sort_i]/(1e6) #transit depths of all the planets in this system, sorted by period
+            system_radii = system_radii[system_sort_i] #radii of all the planets in this system, sorted by period
+
+            #To count the total number of planets in this system:
+            push!(M_obs, length(system_P))
+
+            #To compute the period ratios, period-normalized transit duration ratios, and transit depth ratios in this system:
+            system_Pratio = system_P[2:end] ./ system_P[1:end-1] #period ratios of all the adjacent planet pairs in this system
+            system_depratio = system_dep[2:end] ./ system_dep[1:end-1] #transit depth ratios of all the adjacent planet pairs in this system
+            system_xi = (system_dur[1:end-1] ./ system_dur[2:end]) .* (system_Pratio .^(1//3)) #period-normalized transit duration ratios of all the adjacent planet pairs in this system
+
+            append!(pratios, system_Pratio)
+            append!(depthratios, system_depratio)
+            append!(xis, system_xi)
+            for (j,period_ratio) in enumerate(system_Pratio)
+                if is_period_ratio_near_resonance(period_ratio, sim_param)
+                    append!(xis_mmr, system_xi[j])
+                else
+                    append!(xis_nonmmr, system_xi[j])
+                end
             end
-        end
 
-        #To separate the planets in the system as above and below the boundary:
-        system_above_bools = [photoevap_boundary_Carrera2018(system_radii[x], system_P[x]) for x in 1:length(system_P)]
-        #if length(system_above_bools) > 1 println(system_above_bools) end
+            #To separate the planets in the system as above and below the boundary:
+            system_above_bools = [photoevap_boundary_Carrera2018(system_radii[x], system_P[x]) for x in 1:length(system_P)]
+            #if length(system_above_bools) > 1 println(system_above_bools) end
 
-        #To record the transit depths of the planets above and below the boundary:
-        for (j,D) in enumerate(system_D)
-            if system_above_bools[j] == 1
-                append!(D_above_confirmed, D)
-            elseif system_above_bools[j] == 0
-                append!(D_below_confirmed, D)
+            #To record the transit depths of the planets above and below the boundary:
+            for (j,dep) in enumerate(system_dep)
+                if system_above_bools[j] == 1
+                    append!(depths_above, dep)
+                elseif system_above_bools[j] == 0
+                    append!(depths_below, dep)
+                end
             end
-        end
 
-        #To record the transit depth ratios of the planets above, below, and across the boundary:
-        for (j,D_ratio) in enumerate(system_D_ratio)
-            if system_above_bools[j] + system_above_bools[j+1] == 2 #both planets are above the boundary
-                append!(D_ratio_above_confirmed, D_ratio)
-            elseif system_above_bools[j] + system_above_bools[j+1] == 1 #one planet is above, the other is below the boundary
-                append!(D_ratio_across_confirmed, D_ratio)
-            elseif system_above_bools[j] + system_above_bools[j+1] == 0 #both planets are below the boundary
-                append!(D_ratio_below_confirmed, D_ratio)
+            #To record the transit depth ratios of the planets above, below, and across the boundary:
+            for (j,depratio) in enumerate(system_depratio)
+                if system_above_bools[j] + system_above_bools[j+1] == 2 #both planets are above the boundary
+                    append!(depthratios_above, depratio)
+                elseif system_above_bools[j] + system_above_bools[j+1] == 1 #one planet is above, the other is below the boundary
+                    append!(depthratios_across, depratio)
+                elseif system_above_bools[j] + system_above_bools[j+1] == 0 #both planets are below the boundary
+                    append!(depthratios_below, depratio)
+                end
             end
         end
     end
+
+    Nmult = [sum(M_obs .== k) for k in 1:maximum(M_obs)]
+
+    # To create a CatalogSummaryStatistics object for the Kepler data:
+    ssk_stat = Dict{String,Any}()
+    ssk_stat["num targets"] = size(stellar_catalog,1)
+    ssk_stat["num_tranets"] = size(planets_cleaned,1)
+    ssk_stat["num n-tranet systems"] = Nmult
+    ssk_stat["periods"] = periods
+    ssk_stat["pratios"] = pratios
+    ssk_stat["durations"] = durations
+    ssk_stat["xis"] = xis
+    ssk_stat["xis_nonmmr"] = xis_nonmmr
+    ssk_stat["xis_mmr"] = xis_mmr
+    ssk_stat["depths"] = depths
+    ssk_stat["depths_above"] = depths_above
+    ssk_stat["depths_below"] = depths_below
+    ssk_stat["rratios"] = sqrt.(depthratios)
+    ssk_stat["rratios_above"] = sqrt.(depthratios_above)
+    ssk_stat["rratios_below"] = sqrt.(depthratios_below)
+    ssk_stat["rratios_across"] = sqrt.(depthratios_across)
+
+    return CatalogSummaryStatistics(ssk_stat, Dict{String,Any}())
 end
 
-Nmult_confirmed = [sum(M_confirmed .== k) for k in 1:maximum(M_confirmed)]
+ssk = calc_summary_stats_Kepler(stellar_catalog, planets_cleaned)
