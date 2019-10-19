@@ -60,10 +60,10 @@ function calc_summary_stats_num_n_tranet_systems!(css::CatalogSummaryStatistics,
 end
 
 function calc_summary_stats_duration_ratios_neighbors!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
-  if haskey(css.stat,"duration_ratio_list")
-     return css.stat["duration_ratio_list"]
-  elseif haskey(css.cache,"duration_ratio_list")
-     return css.cache["duration_ratio_list"]
+  if haskey(css.stat,"xis")
+     return css.stat["xis"]
+  elseif haskey(css.cache,"xis")
+     return css.cache["xis"]
   end
   idx_n_tranets = calc_summary_stats_idx_n_tranets!(css,cat_obs,param)
   @assert length(idx_n_tranets) >= 1
@@ -104,19 +104,19 @@ function calc_summary_stats_duration_ratios_neighbors!(css::CatalogSummaryStatis
     end
   end
   resize!(duration_ratio_list,k)
-  css.stat["duration_ratio_list"] = duration_ratio_list
-  css.stat["duration_ratio_non_mmr_list"] = duration_ratio_non_mmr_list
-  css.stat["duration_ratio_near_mmr_list"] = duration_ratio_near_mmr_list
+  css.stat["xis"] = duration_ratio_list
+  css.stat["xis_nonmmr"] = duration_ratio_non_mmr_list
+  css.stat["xis_mmr"] = duration_ratio_near_mmr_list
 
   return duration_ratio_list, duration_ratio_non_mmr_list, duration_ratio_near_mmr_list
 end
 
 function calc_summary_stats_period_radius_ratios_neighbors_internal!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
   #=
-  if haskey(css.stat,"period_ratio_list") && haskey(css.stat,"radius_ratio_list")
-     return (css.stat["period_ratio_list"], css.stat["radius_ratio_list"])
-  elseif haskey(css.cache,"period_ratio_list") && haskey(css.cache,"radius_ratio_list")
-     return (css.cache["period_ratio_list"], css.cache["radius_ratio_list"])
+  if haskey(css.stat,"pratios") && haskey(css.stat,"rratios")
+     return (css.stat["pratios"], css.stat["rratios"])
+  elseif haskey(css.cache,"pratios") && haskey(css.cache,"rratios")
+     return (css.cache["pratios"], css.cache["rratios"])
   end
   =#
   idx_n_tranets = calc_summary_stats_idx_n_tranets!(css,cat_obs,param)
@@ -165,12 +165,12 @@ function calc_summary_stats_period_radius_ratios_neighbors_internal!(css::Catalo
        end
     end
   end
-  css.cache["period_ratio_list"] = period_ratio_list
-  css.cache["radius_ratio_list"] = radius_ratio_list
+  css.cache["pratios"] = period_ratio_list
+  css.cache["rratios"] = radius_ratio_list
 
-  css.cache["radius_ratio_above_list"] = radius_ratio_above_list
-  css.cache["radius_ratio_below_list"] = radius_ratio_below_list
-  css.cache["radius_ratio_across_list"] = radius_ratio_across_list
+  css.cache["rratios_above"] = radius_ratio_above_list
+  css.cache["rratios_below"] = radius_ratio_below_list
+  css.cache["rratios_across"] = radius_ratio_across_list
 
   return (period_ratio_list, radius_ratio_list, radius_ratio_above_list, radius_ratio_below_list, radius_ratio_across_list)
 end
@@ -178,28 +178,28 @@ end
 
 function calc_summary_stats_period_radius_ratios_neighbors!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
   (period_ratio_list,radius_ratio_list) = calc_summary_stats_period_radius_ratios_neighbors_internal!(css,cat_obs,param)[1:2]
-  css.stat["period_ratio_list"] = period_ratio_list
-  css.stat["radius_ratio_list"] = radius_ratio_list
+  css.stat["pratios"] = period_ratio_list
+  css.stat["rratios"] = radius_ratio_list
   return (period_ratio_list, radius_ratio_list)
 end
 
 function calc_summary_stats_period_ratios_neighbors!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
   period_ratio_list = calc_summary_stats_period_radius_ratios_neighbors_internal!(css,cat_obs,param)[1]
-  css.stat["period_ratio_list"] = period_ratio_list
+  css.stat["pratios"] = period_ratio_list
   return period_ratio_list
 end
 
 function calc_summary_stats_radius_ratios_neighbors!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
   radius_ratio_list = calc_summary_stats_period_radius_ratios_neighbors_internal!(css,cat_obs,param)[2]
-  css.stat["radius_ratio_list"] = radius_ratio_list
+  css.stat["rratios"] = radius_ratio_list
   return radius_ratio_list
 end
 
 function calc_summary_stats_radius_ratios_neighbors_photoevap_boundary_Carrera2018!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
     (radius_ratio_above_list, radius_ratio_below_list, radius_ratio_across_list) = calc_summary_stats_period_radius_ratios_neighbors_internal!(css,cat_obs,param)[3:5]
-    css.stat["radius_ratio_above_list"] = radius_ratio_above_list
-    css.stat["radius_ratio_below_list"] = radius_ratio_below_list
-    css.stat["radius_ratio_across_list"] = radius_ratio_across_list
+    css.stat["rratios_above"] = radius_ratio_above_list
+    css.stat["rratios_below"] = radius_ratio_below_list
+    css.stat["rratios_across"] = radius_ratio_across_list
     return (radius_ratio_above_list, radius_ratio_below_list, radius_ratio_across_list)
 end
 
@@ -224,8 +224,8 @@ function calc_summary_stats_mean_std_log_period_depth!(css::CatalogSummaryStatis
       end
    end
 
-  css.cache["P list"] = period_list                                     # We can store whole lists, e.g., if we want to compute K-S distances
-  css.cache["depth list"] = depth_list
+  css.cache["periods"] = period_list                                     # We can store whole lists, e.g., if we want to compute K-S distances
+  css.cache["depths"] = depth_list
   #css.cache["weight list"] = weight_list
 
   idx_good = Bool[ period_list[i]>0.0 && depth_list[i]>0.0 for i in 1:length(period_list) ]
@@ -274,22 +274,22 @@ function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStati
   resize!(period_list,i)
   resize!(depth_list,i)
   resize!(duration_list,i)
-  css.stat["P list"] = period_list                                     # We can store whole lists, e.g., if we want to compute K-S distances
-  css.stat["depth list"] = depth_list
-  css.stat["duration list"] = duration_list
+  css.stat["periods"] = period_list                                     # We can store whole lists, e.g., if we want to compute K-S distances
+  css.stat["depths"] = depth_list
+  css.stat["durations"] = duration_list
   #css.cache["weight list"] = weight_list
 
-  css.cache["depth above list"] = depth_above_list
-  css.cache["depth below list"] = depth_below_list
+  css.cache["depths_above"] = depth_above_list
+  css.cache["depths_below"] = depth_below_list
 
-  #println("# P list = ",period_list)
+  #println("# P = ",period_list)
   return (period_list, depth_list, duration_list, depth_above_list, depth_below_list)
 end
 
 function calc_summary_stats_depths_photoevap_boundary_Carrera2018!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, param::SimParam)
     (depth_above_list, depth_below_list) = calc_summary_stats_cuml_period_depth_duration!(css, cat_obs, param)[4:5]
-    css.stat["depth above list"] = depth_above_list
-    css.stat["depth below list"] = depth_below_list
+    css.stat["depths_above"] = depth_above_list
+    css.stat["depths_below"] = depth_below_list
     return (depth_above_list, depth_below_list)
 end
 
