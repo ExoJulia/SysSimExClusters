@@ -389,3 +389,36 @@ function test_summary_stats()
   cat_obs = observe_kepler_targets_single_obs(cat_phys,sim_param)
   summary_stat = calc_summary_stats_model(cat_obs,sim_param)
 end
+
+
+
+
+
+"""
+    combine_summary_stats(ss1, ss2)
+
+Combine two summary statistics, assuming they have the same keys.
+
+# Arguments:
+- `ss1::ExoplanetsSysSim.CatalogSummaryStatistics`: object containing the summary statistics of a catalog.
+- `ss2::ExoplanetsSysSim.CatalogSummaryStatistics`: object containing the summary statistics of another catalog.
+NOTE: these two summary statistics must have the same keys!
+
+# Returns:
+- `ssc::ExoplanetsSysSim.CatalogSummaryStatistics`: object containing the summary statistics of the combined catalog.
+"""
+function combine_summary_stats(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, ss2::ExoplanetsSysSim.CatalogSummaryStatistics)
+    @assert all(keys(ss1.stat) .== keys(ss2.stat))
+    keys_all = keys(ss1.stat)
+    stat_combined = Dict{String,Any}()
+    for key in keys_all
+        if any(key .== ["num targets", "num_tranets", "num n-tranet systems"])
+            # Sum these summary statistics
+            stat_combined[key] = ss1.stat[key] .+ ss2.stat[key]
+        else
+            # Concatenate these summary statistics
+            stat_combined[key] = [ss1.stat[key]; ss2.stat[key]]
+        end
+    end
+    return ssc = CatalogSummaryStatistics(stat_combined, Dict{String,Any}())
+end
