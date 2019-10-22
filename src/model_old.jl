@@ -66,7 +66,7 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
     log_mean_P = 0.0 # log(generate_periods_power_law(star,sim_param))
     local P
 
-    # New sampling:
+    #= New sampling:
     P = zeros(n)
     for i in 1:n # Draw periods one at a time
         if any(isnan.(P))
@@ -79,9 +79,9 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
     #if !test_stability(P, mass, star.mass, sim_param; ecc=ecc) # This should never happen if our unscaled period draws are correct
         #println("WHAT: ", P)
     #end
-    #
+    =#
 
-    #= Old rejection sampling:
+    # Old rejection sampling:
     # Note: Currently, drawing all periods within a cluster at once and either keeping or rejecting the whole cluster
     #       Should we instead draw periods one at a time?
     Pdist = Truncated(LogNormal(log_mean_P,sigma_logperiod_per_pl_in_cluster*n), 1/sqrt(max_period_ratio), sqrt(max_period_ratio)) #Truncated unscaled period distribution to ensure that the cluster can fit in the period range [min_period, max_period] after scaling by a period scale
@@ -101,7 +101,7 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
         #println("# Warning: Did not find a good set of periods, sizes and masses for one cluster.")
         return (fill(NaN,n), R, mass, ecc, omega)  # Return NaNs for periods to indicate failed
     end
-    =#
+    #
 
     return (P, R, mass, ecc, omega)    # Note can also return earlier if only one planet in cluster or if fail to generate a good set of values
 end
@@ -187,7 +187,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             Plist_tmp::Array{Float64,1}, Rlist_tmp::Array{Float64,1}, masslist_tmp::Array{Float64,1}, ecclist_tmp::Array{Float64,1}, omegalist_tmp::Array{Float64,1} = generate_planet_periods_sizes_masses_eccs_in_cluster(star, sim_param, n=n)
             Rlist[pl_start:pl_stop], masslist[pl_start:pl_stop], ecclist[pl_start:pl_stop], omegalist[pl_start:pl_stop] = Rlist_tmp, masslist_tmp, ecclist_tmp, omegalist_tmp
 
-            # New sampling:
+            #= New sampling:
             idx = .!isnan.(Plist[1:pl_stop-n])
             idy = .!isnan.(Plist_tmp)
             if any(idy)
@@ -205,9 +205,9 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
                 #println("WHAT 2")
                 #Plist[pl_start:pl_stop] .= NaN
             #end
-            #
+            =#
 
-            #= Old rejection sampling:
+            # Old rejection sampling:
             valid_cluster = !any(isnan.(Plist_tmp)) #should this be looking for nans in Plist or Plist_tmp? Was Plist but I think it should be Plist_tmp!
             valid_period_scale = false
             attempt_period_scale = 0
@@ -235,7 +235,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             if !valid_period_scale
                 Plist[pl_start:pl_stop] .= NaN
             end
-            =#
+            #
 
             num_pl_in_cluster_true[c] = sum(.!isnan.(Plist[pl_start:pl_stop]))
             pl_start += n

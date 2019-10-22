@@ -13,11 +13,14 @@ sim_param = setup_sim_param_model()
 
 model_name = "Clustered_P_R_optimization"
 optimization_number = "_random"*ARGS[1] # if want to run on the cluster with random initial active parameters: "_random"*ARGS[1]
+sc_bluer = "q1q17_dr25_gaia_fgk_bluer.jld2"
+sc_redder = "q1q17_dr25_gaia_fgk_redder.jld2"
 AD_mod = true
 num_targs = 79935
 max_incl_sys = 0.
 max_evals = 5000
-dists_include = ["delta_f", "mult_CRPD_r", "periods_KS", "pratios_KS", "durations_KS", "xis_KS", "xis_nonmmr_KS", "xis_mmr_KS", "depths_KS", "rratios_KS"]
+dists_include_split = ["delta_f", "mult_CRPD_r", "pratios_KS", "durations_KS", "depths_KS", "rratios_KS"]
+dists_include_combined = ["delta_f", "mult_CRPD_r", "periods_KS", "pratios_KS", "durations_KS", "xis_KS", "xis_nonmmr_KS", "xis_mmr_KS", "depths_KS", "rratios_KS"]
 Pop_per_param = 4
 
 file_name = model_name*optimization_number*"_targs$(num_targs)_evals$(max_evals).txt"
@@ -29,23 +32,34 @@ write_model_params(f, sim_param)
 
 
 
-##### To load a file with the weights, and simulate a reference catalog if we want to fit to a model:
+##### To split the Kepler data:
 
-# To generate a reference catalog, if we want to fit to a simulated catalog instead of data:
-#=
-Random.seed!(1234) # to have the same reference catalog
-cat_phys = generate_kepler_physical_catalog(sim_param)
-cat_phys_cut = ExoplanetsSysSim.generate_obs_targets(cat_phys,sim_param)
-cat_obs = observe_kepler_targets_single_obs(cat_phys_cut,sim_param)
-summary_stat_ref = calc_summary_stats_model(cat_obs,sim_param)
-=#
+# Set up the summary statistics for the planets around the bluer half:
+add_param_fixed(sim_param,"stellar_catalog", sc_bluer)
+stellar_catalog = ExoplanetsSysSim.StellarTable.setup_star_table(sim_param; force_reread=true)
+@time planets_cleaned = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog, recompute_radii=true)
+
+ssk_bluer = calc_summary_stats_Kepler(stellar_catalog, planets_cleaned)
+
+# Set up the summary statistics for the planets around the redder half:
+add_param_fixed(sim_param,"stellar_catalog", sc_redder)
+stellar_catalog = ExoplanetsSysSim.StellarTable.setup_star_table(sim_param; force_reread=true)
+@time planets_cleaned = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog, recompute_radii=true)
+
+ssk_redder = calc_summary_stats_Kepler(stellar_catalog, planets_cleaned)
+
+
+
+
+
+##### To load a file with the weights:
 
 # To simulate more observed planets for the subsequent model generations:
 add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
-add_param_fixed(sim_param,"max_incl_sys", max_incl_sys)
+add_param_fixed(sim_param,"max_incl_sys", max_incl_sys) # degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
 
 # To load and compute the weights, target distance, and target distance std from a precomputed file:
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, sim_param; dists_include=dists_include)
+active_param_true, weights1, weights2, weightsc, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file_split_samples("Clustered_P_R_split_stars_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, sim_param; stellar_catalog_all=[sc_bluer, sc_redder], dists_include_all=[dists_include_split, dists_include_split], dists_include_combined=dists_include_combined)
 
 
 
@@ -89,7 +103,8 @@ end
 println(f, "# Method: adaptive_de_rand_1_bin_radiuslimited")
 println(f, "# PopulationSize: ", PopSize)
 println(f, "# AD_mod: ", AD_mod)
-println(f, "# Distances used: ", dists_include)
+println(f, "# Distances used (split): ", dists_include_split)
+println(f, "# Distances used (combined): ", dists_include_combined)
 println(f, "#")
 println(f, "# Format: Active_params: [active parameter values]")
 println(f, "# Format: Counts: [observed multiplicities][total planets, total planet pairs]")
@@ -98,8 +113,9 @@ println(f, "# Format: Dists_vals_used: [distance terms][sum of distance terms]")
 println(f, "# Format: Dists_vals_used_w: [weighted distance terms][sum of weighted distance terms]")
 println(f, "#")
 
-target_function(active_param_start, sim_param; ss_fit=ssk, dists_include=dists_include, weights=weights, AD_mod=AD_mod, f=f)
-target_function_transformed_params(active_param_transformed_start, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], sim_param; ss_fit=ssk, dists_include=dists_include, weights=weights, AD_mod=AD_mod, f=f)
+target_function_split_stars(active_param_start, sim_param; stellar_catalog_all=[sc_bluer, sc_redder], ss_fit_all=[ssk_bluer, ssk_redder], dists_include_all=[dists_include_split, dists_include_split], dists_include_combined=dists_include_combined, weights_all=[weights1, weights2], weights_combined=weightsc, AD_mod=AD_mod, f=f)
+target_function_transformed_params_split_stars(active_param_transformed_start, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], sim_param; stellar_catalog_all=[sc_bluer, sc_redder], ss_fit_all=[ssk_bluer, ssk_redder], dists_include_all=[dists_include_split, dists_include_split], dists_include_combined=dists_include_combined, weights_all=[weights1, weights2], weights_combined=weightsc, AD_mod=AD_mod, f=f)
+
 
 
 
@@ -111,9 +127,9 @@ target_function_transformed_params(active_param_transformed_start, transformed_i
 using BlackBoxOptim              # see https://github.com/robertfeldt/BlackBoxOptim.jl for documentation
 
 t_elapsed = @elapsed begin
-    #opt_result = bboptimize(active_params -> target_function(active_params, sim_param; ss_fit=ssk, dists_include=dists_include, weights=weights, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
+    #opt_result = bboptimize(active_params -> target_function_split_stars(active_params, sim_param; stellar_catalog_all=[sc_bluer, sc_redder], ss_fit_all=[ssk_bluer, ssk_redder], dists_include_all=[dists_include_split, dists_include_split], dists_include_combined=dists_include_combined, weights_all=[weights1, weights2], weights_combined=weightsc, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
 
-    opt_result = bboptimize(active_params -> target_function_transformed_params(active_params, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], sim_param; ss_fit=ssk, dists_include=dists_include, weights=weights, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
+    opt_result = bboptimize(active_params -> target_function_transformed_params_split_stars(active_params, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], sim_param; stellar_catalog_all=[sc_bluer, sc_redder], ss_fit_all=[ssk_bluer, ssk_redder], dists_include_all=[dists_include_split, dists_include_split], dists_include_combined=dists_include_combined, weights_all=[weights1, weights2], weights_combined=weightsc, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
 end
 
 println(f, "# best_candidate: ", best_candidate(opt_result))
