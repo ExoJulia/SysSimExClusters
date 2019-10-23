@@ -1,277 +1,27 @@
 using Distributed # just to compile a function
+using ParallelDataTransfer # just to compile a function
 
-##### To define functions for calculating the distances:
 
-function calc_distance(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, ss2::ExoplanetsSysSim.CatalogSummaryStatistics, return_KS_or_AD::String ; AD_mod::Bool=false, all_dist::Bool=false, save_dist::Bool=true)
-    #This function calculates the total KS distance between two summary statistics (simulated observed catalogs).
-    #If 'all_dist=true', the function outputs the individual distances in the distance function.
-    #If 'save_dist=true', the function also saves the distances (individual and total) to a file (assuming file 'f' is open for writing).
 
-    M_cat_obs1 = ones(Int64,0) #array to be filled with the number of transiting planets in each simulated system for ss1
-    M_cat_obs2 = ones(Int64,0) #array to be filled with the number of transiting planets in each simulated system for ss2
-    max_k = get_int(sim_param,"max_tranets_in_sys")
-    for k in 1:max_k
-        append!(M_cat_obs1, k*ones(Int64, ss1.stat["num n-tranet systems"][k]))
-        append!(M_cat_obs2, k*ones(Int64, ss2.stat["num n-tranet systems"][k]))
-    end
-    Nmult_obs1 = ss1.stat["num n-tranet systems"]
-    Nmult_obs2 = ss2.stat["num n-tranet systems"]
-    planets_obs1, pairs_obs1 = sum(Nmult_obs1 .* collect(1:max_k)), sum(Nmult_obs1[2:end] .* collect(1:max_k-1)) #total number of planets, and planet pairs
-    planets_obs2, pairs_obs2 = sum(Nmult_obs2 .* collect(1:max_k)), sum(Nmult_obs2[2:end] .* collect(1:max_k-1)) #total number of planets, and planet pairs
+"""
+    simulate_catalog_and_calc_all_distances_dict(active_param, sim_param; ss_fit, AD_mod=true)
 
-    #To handle empty arrays:
-    if min(length(ss1.stat["radius_ratio_above_list"]), length(ss1.stat["radius_ratio_below_list"]), length(ss1.stat["radius_ratio_across_list"]), length(ss1.stat["duration_ratio_non_mmr_list"]), length(ss1.stat["duration_ratio_near_mmr_list"])) < 2 || min(length(ss2.stat["radius_ratio_above_list"]), length(ss2.stat["radius_ratio_below_list"]), length(ss2.stat["radius_ratio_across_list"]), length(ss2.stat["duration_ratio_non_mmr_list"]), length(ss2.stat["duration_ratio_near_mmr_list"])) < 2 #need at least 2 elements in each of these summary statistics per catalog in order to be able to compute AD distances
-        println("Not enough observed multi-planet systems in one of the catalogs to compute the AD distance.")
-        d = ones(Int64,17)*1e6
+Simulate a catalog with the parameters in `active_param` and compute the distances compared to the catalog provided with `ss_fit`.
 
-        println("Distances: ", d, [sum(d)])
-        if save_dist
-            println(f, "Mult_counts: ", Nmult_obs1, [planets_obs1, pairs_obs1], Nmult_obs2, [planets_obs2, pairs_obs2])
-            println(f, "Dist_KS: ", d, [sum(d)])
-            println(f, "Dist_AD: ", d, [sum(d)])
-        end
+# Arguments:
+- `active_param::Vector{Float64}`: a vector of values for the active model parameters.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `ss_fit::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of the catalog we are trying to fit to.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
 
-        if all_dist
-            if return_KS_or_AD == "KS" || return_KS_or_AD == "AD"
-                return d
-            elseif return_KS_or_AD == "Both"
-                return [d; d[3:end]]
-            end
-        else
-            if return_KS_or_AD == "KS" || return_KS_or_AD == "AD"
-                return sum(d)
-            elseif return_KS_or_AD == "Both"
-                return sum([d; d[3:end]])
-            end
-        end
-    end
+# Returns:
+- `dists::Dict{String,Float64}`: a dictionary containing the individual distance terms.
+- `counts::Dict{String,Any}`: a dictionary containing the multiplicities, numbers of planets, and planet pairs.
+- `summary_stat::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of the simulated catalog.
+"""
+function simulate_catalog_and_calc_all_distances_dict(active_param::Vector{Float64}, sim_param::SimParam; ss_fit::ExoplanetsSysSim.CatalogSummaryStatistics, AD_mod::Bool=true)
 
-    #If there are enough simulated planets to compute distances:
-    max_incl_sys = get_real(sim_param,"max_incl_sys")
-    cos_factor = cos(max_incl_sys*pi/180) #factor to divide the number of targets in simulation by to get the actual number of targets needed (with an isotropic distribution of system inclinations) to produce as many transiting systems for a single observer
-
-    delta_f = abs(ss1.stat["num_tranets"]/(ss1.stat["num targets"]/cos_factor) - ss2.stat["num_tranets"]/(ss2.stat["num targets"]))
-    d_mult_KS = ExoplanetsSysSim.ksstats_ints(M_cat_obs1, M_cat_obs2)[5]
-    d_mult_CRPD = ExoplanetsSysSim.CRPDstats([Nmult_obs1[1:4]; sum(Nmult_obs1[5:end])], [Nmult_obs2[1:4]; sum(Nmult_obs2[5:end])])
-    d_mult_CRPD_switched = ExoplanetsSysSim.CRPDstats([Nmult_obs2[1:4]; sum(Nmult_obs2[5:end])], [Nmult_obs1[1:4]; sum(Nmult_obs1[5:end])])
-
-    #To compute the KS distances:
-    d_KS = Array{Float64}(undef, 17)
-    d_KS[1] = delta_f
-    d_KS[2] = d_mult_KS
-    d_KS[3] = d_mult_CRPD
-    d_KS[4] = d_mult_CRPD_switched
-    d_KS[5] = ExoplanetsSysSim.ksstats(ss1.stat["P list"], ss2.stat["P list"])[5]
-    d_KS[6] = ExoplanetsSysSim.ksstats(ss1.stat["period_ratio_list"], ss2.stat["period_ratio_list"])[5]
-    d_KS[7] = ExoplanetsSysSim.ksstats(ss1.stat["duration list"], ss2.stat["duration list"])[5]
-    d_KS[8] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_list"], ss2.stat["duration_ratio_list"])[5]
-    d_KS[9] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_non_mmr_list"], ss2.stat["duration_ratio_non_mmr_list"])[5]
-    d_KS[10] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_near_mmr_list"], ss2.stat["duration_ratio_near_mmr_list"])[5]
-    d_KS[11] = ExoplanetsSysSim.ksstats(ss1.stat["depth list"], ss2.stat["depth list"])[5]
-    d_KS[12] = ExoplanetsSysSim.ksstats(ss1.stat["depth above list"], ss2.stat["depth above list"])[5]
-    d_KS[13] = ExoplanetsSysSim.ksstats(ss1.stat["depth below list"], ss2.stat["depth below list"])[5]
-    d_KS[14] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_list"], ss2.stat["radius_ratio_list"])[5]
-    d_KS[15] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_above_list"], ss2.stat["radius_ratio_above_list"])[5]
-    d_KS[16] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_below_list"], ss2.stat["radius_ratio_below_list"])[5]
-    d_KS[17] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_across_list"], ss2.stat["radius_ratio_across_list"])[5]
-
-    #To compute the AD distances:
-    if AD_mod
-        ADdist = ExoplanetsSysSim.ADstats_mod
-    else
-        ADdist = ExoplanetsSysSim.ADstats
-    end
-
-    d_AD = Array{Float64}(undef, 17)
-    d_AD[1] = delta_f
-    d_AD[2] = d_mult_KS
-    d_AD[3] = d_mult_CRPD
-    d_AD[4] = d_mult_CRPD_switched
-    d_AD[5] = ADdist(ss1.stat["P list"], ss2.stat["P list"])
-    d_AD[6] = ADdist(ss1.stat["period_ratio_list"], ss2.stat["period_ratio_list"])
-    d_AD[7] = ADdist(ss1.stat["duration list"], ss2.stat["duration list"])
-    d_AD[8] = ADdist(ss1.stat["duration_ratio_list"], ss2.stat["duration_ratio_list"])
-    d_AD[9] = ADdist(ss1.stat["duration_ratio_non_mmr_list"], ss2.stat["duration_ratio_non_mmr_list"])
-    d_AD[10] = ADdist(ss1.stat["duration_ratio_near_mmr_list"], ss2.stat["duration_ratio_near_mmr_list"])
-    d_AD[11] = ADdist(ss1.stat["depth list"], ss2.stat["depth list"])
-    d_AD[12] = ADdist(ss1.stat["depth above list"], ss2.stat["depth above list"])
-    d_AD[13] = ADdist(ss1.stat["depth below list"], ss2.stat["depth below list"])
-    d_AD[14] = ADdist(ss1.stat["radius_ratio_list"], ss2.stat["radius_ratio_list"])
-    d_AD[15] = ADdist(ss1.stat["radius_ratio_above_list"], ss2.stat["radius_ratio_above_list"])
-    d_AD[16] = ADdist(ss1.stat["radius_ratio_below_list"], ss2.stat["radius_ratio_below_list"])
-    d_AD[17] = ADdist(ss1.stat["radius_ratio_across_list"], ss2.stat["radius_ratio_across_list"])
-
-    #To print and/or write the distances to file:
-    println("Multiplicity Counts: ", Nmult_obs1, [planets_obs1, pairs_obs1], Nmult_obs2, [planets_obs2, pairs_obs2])
-    println("KS Distances: ", d_KS, [sum(d_KS)])
-    println("AD Distances: ", d_AD, [sum(d_AD)])
-    if save_dist
-        println(f, "Mult_counts: ", Nmult_obs1, [planets_obs1, pairs_obs1], Nmult_obs2, [planets_obs2, pairs_obs2])
-        println(f, "Dist_KS: ", d_KS, [sum(d_KS)])
-        println(f, "Dist_AD: ", d_AD, [sum(d_AD)])
-    end
-
-    #To return the distances or total distance:
-    if all_dist
-        if return_KS_or_AD == "KS"
-            return d_KS
-        elseif return_KS_or_AD == "AD"
-            return d_AD
-        elseif return_KS_or_AD == "Both"
-            return [d_KS; d_AD[3:end]]
-        end
-    else
-        if return_KS_or_AD == "KS"
-            return sum(d_KS)
-        elseif return_KS_or_AD == "AD"
-            return sum(d_AD)
-        elseif return_KS_or_AD == "Both"
-            return sum([d_KS; d_AD[3:end]])
-        end
-    end
-end
-
-function calc_distance_Kepler(ss1::ExoplanetsSysSim.CatalogSummaryStatistics, return_KS_or_AD::String ; AD_mod::Bool=false, all_dist::Bool=false, save_dist::Bool=true)
-    #This function calculates the total KS distance between a population generated by our model and the actual Kepler population (which must be loaded in).
-    #If 'all_dist=true', the function outputs the individual distances in the distance function.
-    #If 'save_dist=true', the function also saves the distances (individual and total) to a file (assuming file 'f' is open for writing).
-
-    M_cat_obs = ones(Int64,0) #array to be filled with the number of transiting planets in each simulated system
-    max_k = get_int(sim_param,"max_tranets_in_sys")
-    for k in 1:max_k
-        append!(M_cat_obs, k*ones(Int64, ss1.stat["num n-tranet systems"][k]))
-    end
-    Nmult_obs = ss1.stat["num n-tranet systems"]
-    planets_obs, pairs_obs = sum(Nmult_obs .* collect(1:max_k)), sum(Nmult_obs[2:end] .* collect(1:max_k-1)) #total number of planets, and planet pairs
-
-    if min(length(ss1.stat["radius_ratio_above_list"]), length(ss1.stat["radius_ratio_below_list"]), length(ss1.stat["radius_ratio_across_list"]), length(ss1.stat["duration_ratio_non_mmr_list"]), length(ss1.stat["duration_ratio_near_mmr_list"])) < 2 #need at least 2 elements in each of these summary statistics in order to be able to compute AD distances
-        println("Not enough observed multi-planet systems in the simulated catalog.")
-        d = ones(Int64,17)*1e6
-
-        println("Distances: ", d, [sum(d)])
-        if save_dist
-            println(f, "Mult_counts: ", Nmult_obs, [planets_obs, pairs_obs])
-            println(f, "Dist_KS: ", d, [sum(d)])
-            println(f, "Dist_AD: ", d, [sum(d)])
-        end
-
-        if all_dist
-            if return_KS_or_AD == "KS" || return_KS_or_AD == "AD"
-                return d
-            elseif return_KS_or_AD == "Both"
-                return [d; d[3:end]]
-            end
-        else
-            if return_KS_or_AD == "KS" || return_KS_or_AD == "AD"
-                return sum(d)
-            elseif return_KS_or_AD == "Both"
-                return sum([d; d[3:end]])
-            end
-        end
-    end
-
-    max_incl_sys = get_real(sim_param,"max_incl_sys")
-    cos_factor = cos(max_incl_sys*pi/180) #factor to divide the number of targets in simulation by to get the actual number of targets needed (with an isotropic distribution of system inclinations) to produce as many transiting systems for a single observer
-
-    delta_f = abs(ss1.stat["num_tranets"]/(ss1.stat["num targets"]/cos_factor) - length(P_confirmed)/get_int(sim_param,"num_kepler_targets"))
-    d_mult_KS = ExoplanetsSysSim.ksstats_ints(M_cat_obs, M_confirmed)[5]
-    d_mult_CRPD = ExoplanetsSysSim.CRPDstats([Nmult_obs[1:4]; sum(Nmult_obs[5:end])], [Nmult_confirmed[1:4]; sum(Nmult_confirmed[5:end])])
-    d_mult_CRPD_switched = ExoplanetsSysSim.CRPDstats([Nmult_confirmed[1:4]; sum(Nmult_confirmed[5:end])], [Nmult_obs[1:4]; sum(Nmult_obs[5:end])])
-
-    #To compute the KS distances:
-    d_KS = Array{Float64}(undef, 17)
-    d_KS[1] = delta_f
-    d_KS[2] = d_mult_KS
-    d_KS[3] = d_mult_CRPD
-    d_KS[4] = d_mult_CRPD_switched
-    d_KS[5] = ExoplanetsSysSim.ksstats(ss1.stat["P list"], P_confirmed)[5]
-    d_KS[6] = ExoplanetsSysSim.ksstats(ss1.stat["period_ratio_list"], R_confirmed)[5]
-    d_KS[7] = ExoplanetsSysSim.ksstats(ss1.stat["duration list"].*24, t_D_confirmed)[5] #transit durations in simulations are in days, while in the Kepler catalog are in hours
-    d_KS[8] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_list"], xi_confirmed)[5]
-    d_KS[9] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_non_mmr_list"], xi_non_mmr_confirmed)[5]
-    d_KS[10] = ExoplanetsSysSim.ksstats(ss1.stat["duration_ratio_near_mmr_list"], xi_near_mmr_confirmed)[5]
-    d_KS[11] = ExoplanetsSysSim.ksstats(ss1.stat["depth list"], D_confirmed)[5]
-    d_KS[12] = ExoplanetsSysSim.ksstats(ss1.stat["depth above list"], D_above_confirmed)[5]
-    d_KS[13] = ExoplanetsSysSim.ksstats(ss1.stat["depth below list"], D_below_confirmed)[5]
-    d_KS[14] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_list"].^2, D_ratio_confirmed)[5] #simulations save radius ratios while we computed transit duration ratios from the Kepler catalog
-    d_KS[15] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_above_list"].^2, D_ratio_above_confirmed)[5]
-    d_KS[16] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_below_list"].^2, D_ratio_below_confirmed)[5]
-    d_KS[17] = ExoplanetsSysSim.ksstats(ss1.stat["radius_ratio_across_list"].^2, D_ratio_across_confirmed)[5]
-
-    #To compute the AD distances:
-    if AD_mod
-        ADdist = ExoplanetsSysSim.ADstats_mod
-    else
-        ADdist = ExoplanetsSysSim.ADstats
-    end
-
-    d_AD = Array{Float64}(undef, 17)
-    d_AD[1] = delta_f
-    d_AD[2] = d_mult_KS
-    d_AD[3] = d_mult_CRPD
-    d_AD[4] = d_mult_CRPD_switched
-    d_AD[5] = ADdist(ss1.stat["P list"], P_confirmed)
-    d_AD[6] = ADdist(ss1.stat["period_ratio_list"], R_confirmed)
-    d_AD[7] = ADdist(ss1.stat["duration list"].*24, t_D_confirmed) #transit durations in simulations are in days, while in the Kepler catalog are in hours
-    d_AD[8] = ADdist(ss1.stat["duration_ratio_list"], xi_confirmed)
-    d_AD[9] = ADdist(ss1.stat["duration_ratio_non_mmr_list"], xi_non_mmr_confirmed)
-    d_AD[10] = ADdist(ss1.stat["duration_ratio_near_mmr_list"], xi_near_mmr_confirmed)
-    d_AD[11] = ADdist(ss1.stat["depth list"], D_confirmed)
-    d_AD[12] = ADdist(ss1.stat["depth above list"], D_above_confirmed)
-    d_AD[13] = ADdist(ss1.stat["depth below list"], D_below_confirmed)
-    d_AD[14] = ADdist(ss1.stat["radius_ratio_list"].^2, D_ratio_confirmed) #simulations save radius ratios while we computed transit duration ratios from the Kepler catalog
-    d_AD[15] = ADdist(ss1.stat["radius_ratio_above_list"].^2, D_ratio_above_confirmed)
-    d_AD[16] = ADdist(ss1.stat["radius_ratio_below_list"].^2, D_ratio_below_confirmed)
-    d_AD[17] = ADdist(ss1.stat["radius_ratio_across_list"].^2, D_ratio_across_confirmed)
-
-    #To print and/or write the distances to file:
-    println("Multiplicity Counts: ", Nmult_obs, [planets_obs, pairs_obs])
-    println("KS Distances: ", d_KS, [sum(d_KS)])
-    println("AD Distances: ", d_AD, [sum(d_AD)])
-    if save_dist
-        println(f, "Mult_counts: ", Nmult_obs, [planets_obs, pairs_obs])
-        println(f, "Dist_KS: ", d_KS, [sum(d_KS)])
-        println(f, "Dist_AD: ", d_AD, [sum(d_AD)])
-    end
-
-    #To return the distances or total distance:
-    if all_dist
-        if return_KS_or_AD == "KS"
-            return d_KS
-        elseif return_KS_or_AD == "AD"
-            return d_AD
-        elseif return_KS_or_AD == "Both"
-            return [d_KS; d_AD[3:end]]
-        end
-    else
-        if return_KS_or_AD == "KS"
-            return sum(d_KS)
-        elseif return_KS_or_AD == "AD"
-            return sum(d_AD)
-        elseif return_KS_or_AD == "Both"
-            return sum([d_KS; d_AD[3:end]])
-        end
-    end
-end
-
-function target_function(active_param::Vector{Float64}, use_KS_or_AD::String, Kep_or_Sim::String ; AD_mod::Bool=false, weights::Vector{Float64}=ones(17), all_dist::Bool=false, save_dist::Bool=true)
-    #This function takes in the values of the active model parameters, generates a simulated observed catalog, and computes the distance function.
-    #If 'all_dist=true', the function outputs the individual distances in the distance function.
-    #If 'save_dist=true', the function also saves the distances (unweighted and weighted, individual and total) to a file (assuming file 'f' is open for writing).
-
-    println("Active parameter values: ", active_param)
-    #=
-    log_rate = active_param[2] + active_param[3]
-    if log_rate > 2.5
-        println(f, "Not simulating to save time because ln(lc*lp) = $(log_rate) > 2.5 !")
-        return 1e6
-    end
-    =#
-    if save_dist
-        println(f, "Active_params: ", active_param) #to write the params to file
-    end
-
-    global sim_param
+    # Generate a simulated catalog with the input model parameters in 'active_param':
     sim_param_here = deepcopy(sim_param)
     ExoplanetsSysSim.update_sim_param_from_vector!(active_param,sim_param_here)
     cat_phys = generate_kepler_physical_catalog(sim_param_here)
@@ -279,159 +29,221 @@ function target_function(active_param::Vector{Float64}, use_KS_or_AD::String, Ke
     cat_obs = observe_kepler_targets_single_obs(cat_phys_cut,sim_param_here)
     summary_stat = calc_summary_stats_model(cat_obs,sim_param_here)
 
-    if Kep_or_Sim == "Kep"
-        dist = calc_distance_Kepler(summary_stat, use_KS_or_AD; AD_mod=AD_mod, all_dist=true, save_dist=save_dist)
-    elseif Kep_or_Sim == "Sim"
-        global summary_stat_ref
-        dist = calc_distance(summary_stat, summary_stat_ref, use_KS_or_AD; AD_mod=AD_mod, all_dist=true, save_dist=save_dist)
+    # Compute the distances between the simulated catalog and 'ss_fit':
+    dists, counts = calc_all_distances_dict(sim_param, summary_stat, ss_fit; AD_mod=AD_mod)
+
+    return (dists, counts, summary_stat)
+end
+
+
+
+"""
+    target_function(active_param, sim_param; ss_fit, dists_include, weights, AD_mod=true, all_dist=false, save_dist=true)
+
+Evaluate the target function to return the total weighted distance (or individual weighted distance terms) between a simulated catalog with the parameters in `active_param` and the catalog provided with `ss_fit`.
+
+# Arguments:
+- `active_param::Vector{Float64}`: a vector of values for the active model parameters.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `ss_fit::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of the catalog we are trying to fit to.
+- `dists_include::Vector{String}`: a vector of strings for the names of the distance terms to be included in the total distance.
+- `weights::Dict{String,Float64}`: a dictionary containing the weights of the individual distance terms.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+- `all_dist::Bool=false`: whether to return all the individual weighted distance terms (if true) or just the total weighted distance (if true).
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+
+# Returns:
+The total weighted distance (a Float64) if `all_dist=false` or the individual weighted distance terms (a Vector{Float64}) if `all_dist=true` of the simulated catalog compared to the input catalog.
+"""
+function target_function(active_param::Vector{Float64}, sim_param::SimParam; ss_fit::ExoplanetsSysSim.CatalogSummaryStatistics, dists_include::Vector{String}, weights::Dict{String,Float64}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+
+    println("Active parameter values: ", active_param)
+    if save_dist && !isnothing(f)
+        println(f, "Active_params: ", active_param) # to write the params to file
     end
-
-    weighted_dist = dist .* weights
-
-    if weights != ones(17)
-        println("Weighted distances: ", weighted_dist, [sum(weighted_dist)])
-        if save_dist
-            println(f, "Dist_weighted: ", weighted_dist, [sum(weighted_dist)])
+    #=
+    log_rate = active_param[2] + active_param[3]
+    if log_rate > 2.5
+        println("Not simulating to save time because ln(lc*lp) = $(log_rate) > 2.5 !")
+        if save_dist && !isnothing(f)
+            println(f, "Not simulating to save time because ln(lc*lp) = $(log_rate) > 2.5 !")
         end
+        return 1e6
+    end
+    =#
+
+    # Generate a simulated catalog and compute the distances:
+    dists, counts, summary_stat = simulate_catalog_and_calc_all_distances_dict(active_param, sim_param; ss_fit=ss_fit, AD_mod=AD_mod)
+
+    # Compute the individual and total weighted distances:
+    dists_used = Dict([(key, 0.) for key in dists_include])
+    dists_used_w = Dict([(key, 0.) for key in dists_include])
+    for (i,key) in enumerate(dists_include)
+        dists_used[key] = dists[key]
+        dists_used_w[key] = dists[key]*weights[key]
+    end
+    dists_keys_list = keys(dists_used_w)
+    dists_used_list = values(dists_used)
+    dists_used_w_list = values(dists_used_w)
+
+    # Print and/or write the distances to file:
+    println("Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]])
+    #println("Dists_keys_all: ", keys(dists))
+    #println("Dists_vals_all: ", values(dists))
+    println("Dists_keys_used: ", dists_keys_list)
+    println("Dists_vals_used: ", dists_used_list, [sum(dists_used_list)])
+    println("Dists_vals_used_w: ", dists_used_w_list, [sum(dists_used_w_list)])
+    if save_dist && !isnothing(f)
+        println(f, "Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]])
+        #println(f, "Dists_keys_all: ", keys(dists))
+        #println(f, "Dists_vals_all: ", values(dists))
+        println(f, "Dists_keys_used: ", dists_keys_list)
+        println(f, "Dists_vals_used: ", dists_used_list, [sum(dists_used_list)])
+        println(f, "Dists_vals_used_w: ", dists_used_w_list, [sum(dists_used_w_list)])
     end
 
     if all_dist
-        return weighted_dist
+        return dists_used_w_list
     else
-        return sum(weighted_dist)
+        return sum(dists_used_w_list)
     end
 end
 
-function compute_weights_target_fitness_std_perfect_model(num_evals::Int64, use_KS_or_AD::String ; AD_mod::Bool=false, weight::Bool=true, dists_exclude::Vector{Int64}=Int64[], save_dist::Bool=true)
-    t_elapsed = @elapsed begin
-        active_param_true = make_vector_of_sim_param(sim_param)
-        println("# True values: ", active_param_true)
-        if save_dist
-            println(f, "# Format: Dist: [distances][total distance]")
-        end
 
-        if nprocs() == 1
-            dists_true = zeros(num_evals,17)
-            for i in 1:num_evals
-                dists_true[i,:] = target_function(active_param_true, use_KS_or_AD, "Sim"; AD_mod=AD_mod, all_dist=true, save_dist=save_dist)
-            end
-        else # if nprocs() > 1
-            dists_true = SharedArray{Float64,2}(num_evals,17)
-            @sync @distributed for i in 1:num_evals
-                dists_true[i,:] = target_function(active_param_true, use_KS_or_AD, "Sim"; AD_mod=AD_mod, all_dist=true, save_dist=save_dist)
-            end
-        end
 
-        mean_dists = transpose(mean(dists_true, dims=1))[:,] #array of mean distances for each individual distance
-        mean_dist = mean(sum(dists_true, dims=2)) #mean total distance
-        #std_dists = transpose(std(dists_true, 1))[:,] #array of std distances for each individual distance
-        rms_dists = transpose(sqrt.(mean(dists_true .^2, dims=1)))[:,] #array of rms (std around 0)  distances for each individual distance
-        std_dist = std(sum(dists_true, dims=2)) #std of total distance
-        rms_dist = sqrt(mean(sum(dists_true, dims=2) .^2)) #rms (std around 0) of total distance; should be similar to the mean total distance
+"""
+    target_function_split_stars(active_param, sim_param; stellar_catalog_all, ss_fit_all, dists_include_all, dists_include_combined, weights_all, weights_combined, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
 
-        if weight
-            weights = 1 ./ rms_dists #to use the array 'rms_dists' as the weights for the individual distances
-        else
-            weights = ones(17)
-        end
-        weights[dists_exclude] .= 0. #to exclude certain distances from being used in the total distance function (but still computing and saving them during the optimization) by setting their weights to zero
+Evaluate the target function to return the total weighted distance (or individual weighted distance terms) between two simulated catalogs splitting the stellar catalog with the parameters in `active_param` and the catalogs provided with `ss_fit_all` (split in the same way for the stellar catalog).
 
-        weighted_dists_true = zeros(num_evals,length(weights))
-        for i in 1:num_evals
-            weighted_dists_true[i,:] = dists_true[i,:]  .* weights
-        end
-        mean_weighted_dists = transpose(mean(weighted_dists_true, dims=1))[:,] #array of mean weighted distances for each individual distance
-        mean_weighted_dist = mean(sum(weighted_dists_true, dims=2)) #mean weighted total distance
-        std_weighted_dist = std(sum(weighted_dists_true, dims=2)) #std of weighted total distance
+# Arguments:
+- `active_param::Vector{Float64}`: a vector of values for the active model parameters.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `stellar_catalog_all::Array{String,1}`: names of the split stellar catalog files.
+- `ss_fit_all::Array{ExoplanetsSysSim.CatalogSummaryStatistics,1}`: array of objects containing the summary statistics of the catalogs we are trying to fit to.
+- `dists_include_all::Array{Vector{String},1}`: array of vectors of strings for the names of the distance terms in the split samples to be included in the total distance.
+- `dists_include_combined::Vector{String}`: vector of strings for the names of the distance terms of the combined sample to be included in the total distance.
+- `weights_all::Array{Dict{String,Float64},1}`: array of dictionaries containing the weights of the individual distance terms for the split samples.
+- `weights_combined::Dict{String,Float64}`: dictionary containing the weights of the individual distance terms for the combined sample.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+- `all_dist::Bool=false`: whether to return all the individual weighted distance terms (if true) or just the total weighted distance (if true).
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+
+# Returns:
+The total weighted distance (a Float64) if `all_dist=false` or the individual weighted distance terms (a Tuple{Vector{Float64}}) if `all_dist=true` of the simulated catalog compared to the input catalog.
+"""
+function target_function_split_stars(active_param::Vector{Float64}, sim_param::SimParam; stellar_catalog_all::Array{String,1}, ss_fit_all::Array{ExoplanetsSysSim.CatalogSummaryStatistics,1}, dists_include_all::Array{Vector{String},1}, dists_include_combined::Vector{String}, weights_all::Array{Dict{String,Float64},1}, weights_combined::Dict{String,Float64}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+    @assert length(stellar_catalog_all) == length(ss_fit_all) == length(dists_include_all) == length(weights_all) == 2
+
+    println("Active parameter values: ", active_param)
+    if save_dist && !isnothing(f)
+        println(f, "Active_params: ", active_param) # to write the params to file
     end
 
-    println("Mean dists: ", mean_dists)
-    println("Rms dists: ", rms_dists)
-    println("Weights (1/rms dists): ", weights)
-    println("Mean weighted dists: ", mean_weighted_dists)
-    println("Distance using true values: ", mean_dist, " +/- ", std_dist)
-    println("Weighted distance using true values: ", mean_weighted_dist, " +/- ", std_weighted_dist)
-    if save_dist
-        println(f, "#")
-        println(f, "Mean: ", mean_dists, [mean_dist])
-        println(f, "Rms: ", rms_dists, [rms_dist])
-        println(f, "Weights (1/rms dists): ", weights)
-        println(f, "Mean weighted dists: ", mean_weighted_dists, [mean_weighted_dist])
-        println(f, "# Distance using true values (default parameter values): ", mean_dist, " +/- ", std_dist)
-        println(f, "# Weighted distance using true values (default parameter values): ", mean_weighted_dist, " +/- ", std_weighted_dist)
-        println(f, "# elapsed time: ", t_elapsed, " seconds")
+    # Generate a simulated catalog for each stellar sample and compute the distances:
+    add_param_fixed(sim_param,"stellar_catalog", stellar_catalog_all[1])
+    stellar_catalog = ExoplanetsSysSim.StellarTable.setup_star_table(sim_param; force_reread=true)
+    dists1, counts1, ss1 = simulate_catalog_and_calc_all_distances_dict(active_param, sim_param; ss_fit=ss_fit_all[1], AD_mod=AD_mod)
+
+    add_param_fixed(sim_param,"stellar_catalog", stellar_catalog_all[2])
+    stellar_catalog = ExoplanetsSysSim.StellarTable.setup_star_table(sim_param; force_reread=true)
+    dists2, counts2, ss2 = simulate_catalog_and_calc_all_distances_dict(active_param, sim_param; ss_fit=ss_fit_all[2], AD_mod=AD_mod)
+
+    # Combine the input catalogs and the simulated catalogs:
+    ssc_fit = combine_summary_stats(ss_fit_all[1], ss_fit_all[2])
+    ssc = combine_summary_stats(ss1, ss2)
+
+    # Compute the distances for the combined simulated catalog as compared to the combined input catalog:
+    distsc, countsc = calc_all_distances_dict(sim_param, ssc, ssc_fit; AD_mod=AD_mod)
+
+    # Compute the individual and total weighted distances:
+    dists1_used, dists1_used_w = Dict{String,Float64}(), Dict{String,Float64}()
+    dists2_used, dists2_used_w = Dict{String,Float64}(), Dict{String,Float64}()
+    distsc_used, distsc_used_w = Dict{String,Float64}(), Dict{String,Float64}()
+    for (i,key) in enumerate(dists_include_all[1])
+        dists1_used[key] = dists1[key]
+        dists1_used_w[key] = dists1[key]*weights_all[1][key]
+    end
+    for (i,key) in enumerate(dists_include_all[2])
+        dists2_used[key] = dists2[key]
+        dists2_used_w[key] = dists2[key]*weights_all[2][key]
+    end
+    for (i,key) in enumerate(dists_include_combined)
+        distsc_used[key] = distsc[key]
+        distsc_used_w[key] = distsc[key]*weights_combined[key]
+    end
+    dists1_keys_list = keys(dists1_used_w)
+    dists1_used_list, dists1_used_w_list = values(dists1_used), values(dists1_used_w)
+    dists2_keys_list = keys(dists2_used_w)
+    dists2_used_list, dists2_used_w_list = values(dists2_used), values(dists2_used_w)
+    distsc_keys_list = keys(distsc_used_w)
+    distsc_used_list, distsc_used_w_list = values(distsc_used), values(distsc_used_w)
+
+    # Print and/or write the distances to file:
+    println("[$(stellar_catalog_all[1])] Counts: ", counts1["Nmult1"], [counts1["n_pl1"], counts1["n_pairs1"]])
+    println("Dists1_keys_used: ", dists1_keys_list)
+    println("Dists1_vals_used: ", dists1_used_list, [sum(dists1_used_list)])
+    println("Dists1_vals_used_w: ", dists1_used_w_list, [sum(dists1_used_w_list)])
+    println("[$(stellar_catalog_all[2])] Counts: ", counts2["Nmult1"], [counts2["n_pl1"], counts2["n_pairs1"]])
+    println("Dists2_keys_used: ", dists2_keys_list)
+    println("Dists2_vals_used: ", dists2_used_list, [sum(dists2_used_list)])
+    println("Dists2_vals_used_w: ", dists2_used_w_list, [sum(dists2_used_w_list)])
+    println("[Combined] Counts: ", countsc["Nmult1"], [countsc["n_pl1"], countsc["n_pairs1"]])
+    println("Distsc_keys_used: ", distsc_keys_list)
+    println("Distsc_vals_used: ", distsc_used_list, [sum(distsc_used_list)])
+    println("Distsc_vals_used_w: ", distsc_used_w_list, [sum(distsc_used_w_list)])
+    println("Total_dist_w: ", [sum(dists1_used_w_list) + sum(dists2_used_w_list) + sum(distsc_used_w_list)])
+    println("#")
+    if save_dist && !isnothing(f)
+        println(f, "[$(stellar_catalog_all[1])] Counts: ", counts1["Nmult1"], [counts1["n_pl1"], counts1["n_pairs1"]])
+        println(f, "Dists1_keys_used: ", dists1_keys_list)
+        println(f, "Dists1_vals_used: ", dists1_used_list, [sum(dists1_used_list)])
+        println(f, "Dists1_vals_used_w: ", dists1_used_w_list, [sum(dists1_used_w_list)])
+        println(f, "[$(stellar_catalog_all[2])] Counts: ", counts2["Nmult1"], [counts2["n_pl1"], counts2["n_pairs1"]])
+        println(f, "Dists2_keys_used: ", dists2_keys_list)
+        println(f, "Dists2_vals_used: ", dists2_used_list, [sum(dists2_used_list)])
+        println(f, "Dists2_vals_used_w: ", dists2_used_w_list, [sum(dists2_used_w_list)])
+        println(f, "[Combined] Counts: ", countsc["Nmult1"], [countsc["n_pl1"], countsc["n_pairs1"]])
+        println(f, "Distsc_keys_used: ", distsc_keys_list)
+        println(f, "Distsc_vals_used: ", distsc_used_list, [sum(distsc_used_list)])
+        println(f, "Distsc_vals_used_w: ", distsc_used_w_list, [sum(distsc_used_w_list)])
+        println(f, "Total_dist_w: ", [sum(dists1_used_w_list) + sum(dists2_used_w_list) + sum(distsc_used_w_list)])
         println(f, "#")
     end
 
-    return (active_param_true, weights, mean_weighted_dist, std_weighted_dist)
+    if all_dist
+        return (dists1_used_w_list, dists2_used_w_list, distsc_used_w_list)
+    else
+        return sum(dists1_used_w_list) + sum(dists2_used_w_list) + sum(distsc_used_w_list)
+    end
 end
 
-function compute_weights_target_fitness_std_from_file(file_name::String, num_evals::Int64, use_KS_or_AD::String ; weight::Bool=true, dists_exclude::Vector{Int64}=Int64[], save_dist::Bool=true)
-    t_elapsed = @elapsed begin
-        active_param_true = make_vector_of_sim_param(sim_param)
-        println("# True values: ", active_param_true)
 
-        dists_true = zeros(num_evals,17)
-        open(file_name) do f_weights
-            eval_count = 1
-            for (i,line) in enumerate(eachline(f_weights))
-                if length(line) > 8
-                    if line[1:7] == "Dist_"*use_KS_or_AD
-                        dists_str, sum_str = split(line[11:end-1], "][")
-                        dists_true[eval_count,:] = [parse(Float64, x) for x in split(dists_str, ", ")]
-                        eval_count += 1
-                    end
-                end
-            end
-        end
 
-        mean_dists = transpose(mean(dists_true, dims=1))[:,] #array of mean distances for each individual distance
-        mean_dist = mean(sum(dists_true, dims=2)) #mean total distance
-        #std_dists = transpose(std(dists_true, 1))[:,] #array of std distances for each individual distance
-        rms_dists = transpose(sqrt.(mean(dists_true .^2, dims=1)))[:,] #array of rms (std around 0)  distances for each individual distance
-        std_dist = std(sum(dists_true, dims=2)) #std of total distance
-        rms_dist = sqrt(mean(sum(dists_true, dims=2) .^2)) #rms (std around 0) of total distance; should be similar to the mean total distance
+"""
+    target_function_transformed_params(active_param_transformed, transformed_indices, A, B, C, sim_param; ss_fit, dists_include, weights, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
 
-        if weight
-            weights = 1 ./ rms_dists #to use the array 'rms_dists' as the weights for the individual distances
-        else
-            weights = ones(17)
-        end
-        weights[dists_exclude] .= 0. #to exclude certain distances from being used in the total distance function (but still computing and saving them during the optimization) by setting their weights to zero
+Same as `target_function`, but takes in a list of active parameters that have a pair of variables transformed via the triangle transformation. Evaluate `target_function` after transforming the transformed parameters back to physical model parameters.
 
-        weighted_dists_true = zeros(num_evals,length(weights))
-        for i in 1:num_evals
-            weighted_dists_true[i,:] = dists_true[i,:]  .* weights
-        end
-        mean_weighted_dists = transpose(mean(weighted_dists_true, dims=1))[:,] #array of mean weighted distances for each individual distance
-        mean_weighted_dist = mean(sum(weighted_dists_true, dims=2)) #mean weighted total distance
-        std_weighted_dist = std(sum(weighted_dists_true, dims=2)) #std of weighted total distance
-    end
+# Arguments:
+- `active_param_transformed::Vector{Float64}`: a vector of values for the transformed active model parameters.
+- `transformed_indices::Vector{Int64}`: a vector of indices for the two transformed parameters.
+- `A::Vector{Float64}`, `B::Vector{Float64}`, `C::Vector{Float64}`: vertices for the triangle defining the region of allowed values for the two transformed parameters (the labeling of A/B/C does not matter).
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `ss_fit::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of the catalog we are trying to fit to.
+- `dists_include::Vector{String}`: a vector of strings for the names of the distance terms to be included in the total distance.
+- `weights::Dict{String,Float64}`: a dictionary containing the weights of the individual distance terms.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+- `all_dist::Bool=false`: whether to return all the individual weighted distance terms (if true) or just the total weighted distance (if true).
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
 
-    println("# Computing weights from pre-computed file: ", use_KS_or_AD)
-    println("Mean dists: ", mean_dists)
-    println("Rms dists: ", rms_dists)
-    println("Weights_$(use_KS_or_AD): ", weights)
-    println("Mean weighted dists: ", mean_weighted_dists)
-    println("Distance using true values: ", mean_dist, " +/- ", std_dist)
-    println("Weighted distance using true values: ", mean_weighted_dist, " +/- ", std_weighted_dist)
-    if save_dist
-        println(f, "#")
-        println(f, "# Computing weights from pre-computed file: ", use_KS_or_AD)
-        println(f, "Mean: ", mean_dists, [mean_dist])
-        println(f, "Rms: ", rms_dists, [rms_dist])
-        println(f, "Weights_$(use_KS_or_AD): ", weights)
-        println(f, "Mean weighted dists: ", mean_weighted_dists, [mean_weighted_dist])
-        println(f, "# Distance using true values (default parameter values): ", mean_dist, " +/- ", std_dist)
-        println(f, "# Weighted distance using true values (default parameter values): ", mean_weighted_dist, " +/- ", std_weighted_dist)
-        println(f, "# elapsed time: ", t_elapsed, " seconds")
-        println(f, "#")
-    end
-
-    return (active_param_true, weights, mean_weighted_dist, std_weighted_dist)
-end
-
-function target_function_transformed_params(active_param_transformed::Vector{Float64}, transformed_indices::Vector{Int64}, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64}, use_KS_or_AD::String, Kep_or_Sim::String ; AD_mod::Bool=false, weights::Vector{Float64}=ones(17), all_dist::Bool=false, save_dist::Bool=true)
+# Returns:
+The total weighted distance (a Float64) if `all_dist=false` or the individual weighted distance terms (a Vector{Float64}) if `all_dist=true` of the simulated catalog compared to the input catalog.
+"""
+function target_function_transformed_params(active_param_transformed::Vector{Float64}, transformed_indices::Vector{Int64}, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64}, sim_param::SimParam; ss_fit::ExoplanetsSysSim.CatalogSummaryStatistics, dists_include::Vector{String}, weights::Dict{String,Float64}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
 
     r1, r2 = active_param_transformed[transformed_indices]
     @assert 0. <= r1 <= 1.
@@ -439,5 +251,490 @@ function target_function_transformed_params(active_param_transformed::Vector{Flo
     active_param = deepcopy(active_param_transformed)
     active_param[transformed_indices] = map_square_to_triangle(r1, r2, A, B, C)
 
-    return target_function(active_param, use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=all_dist, save_dist=save_dist)
+    return target_function(active_param, sim_param; ss_fit=ss_fit, dists_include=dists_include, weights=weights, AD_mod=AD_mod, all_dist=all_dist, save_dist=save_dist, f=f)
+end
+
+
+
+"""
+    target_function_transformed_params_split_stars(active_param_transformed, transformed_indices, A, B, C, sim_param; stellar_catalog_all, ss_fit_all, dists_include_all, dists_include_combined, weights_all, weights_combined, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
+
+Same as `target_function_split_stars`, but takes in a list of active parameters that have a pair of variables transformed via the triangle transformation. Evaluate `target_function_split_stars` after transforming the transformed parameters back to physical model parameters.
+
+# Arguments:
+- `active_param_transformed::Vector{Float64}`: a vector of values for the transformed active model parameters.
+- `transformed_indices::Vector{Int64}`: a vector of indices for the two transformed parameters.
+- `A::Vector{Float64}`, `B::Vector{Float64}`, `C::Vector{Float64}`: vertices for the triangle defining the region of allowed values for the two transformed parameters (the labeling of A/B/C does not matter).
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `stellar_catalog_all::Array{String,1}`: names of the split stellar catalog files.
+- `ss_fit_all::Array{ExoplanetsSysSim.CatalogSummaryStatistics,1}`: array of objects containing the summary statistics of the catalogs we are trying to fit to.
+- `dists_include_all::Array{Vector{String},1}`: array of vectors of strings for the names of the distance terms in the split samples to be included in the total distance.
+- `dists_include_combined::Vector{String}`: vector of strings for the names of the distance terms of the combined sample to be included in the total distance.
+- `weights_all::Array{Dict{String,Float64},1}`: array of dictionaries containing the weights of the individual distance terms for the split samples.
+- `weights_combined::Dict{String,Float64}`: dictionary containing the weights of the individual distance terms for the combined sample.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+- `all_dist::Bool=false`: whether to return all the individual weighted distance terms (if true) or just the total weighted distance (if true).
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+
+# Returns:
+The total weighted distance (a Float64) if `all_dist=false` or the individual weighted distance terms (a Vector{Float64}) if `all_dist=true` of the simulated catalog compared to the input catalog.
+"""
+function target_function_transformed_params_split_stars(active_param_transformed::Vector{Float64}, transformed_indices::Vector{Int64}, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64}, sim_param::SimParam; stellar_catalog_all::Array{String,1}, ss_fit_all::Array{ExoplanetsSysSim.CatalogSummaryStatistics,1}, dists_include_all::Array{Vector{String},1}, dists_include_combined::Vector{String}, weights_all::Array{Dict{String,Float64},1}, weights_combined::Dict{String,Float64}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+
+    r1, r2 = active_param_transformed[transformed_indices]
+    @assert 0. <= r1 <= 1.
+    @assert 0. <= r2 <= 1.
+    active_param = deepcopy(active_param_transformed)
+    active_param[transformed_indices] = map_square_to_triangle(r1, r2, A, B, C)
+
+    return target_function_split_stars(active_param, sim_param; stellar_catalog_all=stellar_catalog_all, ss_fit_all=ss_fit_all, dists_include_all=dists_include_all, dists_include_combined=dists_include_combined, weights_all=weights_all, weights_combined=weights_combined, AD_mod=AD_mod, all_dist=all_dist, save_dist=save_dist, f=f)
+end
+
+
+
+
+
+"""
+    compute_weights_target_fitness_std_from_array(dists_vals_all, dists_keys_all; dists_include, save_dist=true, f=nothing)
+
+Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, given an array of distance terms from multiple simulations.
+
+# Arguments:
+- `dists_vals_all::Array{Float64,2}`: an array of distance terms, where each row is one simulation.
+- `dists_keys_all::Vector{String}`: a vector of strings for the names of all the distance terms (columns in `dists_vals_all`).
+- `dists_include::Vector{String}`: a vector of strings for the names of the distance terms to be included in the total distance.
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+NOTE: `dists_include` specifies which distance terms are included in calculating the mean and standard deviation of the total weighted distance, but ALL the distance terms and their weights are returned regardless.
+
+# Returns:
+- `weights::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms.
+- `totdist_w_mean_used::Float64`: the total weighted distance including only distance terms in `dists_include`.
+- `totdist_w_std_used::Float64`: the standard deviation of the total weighted distance including only distance terms in `dists_include`.
+"""
+function compute_weights_target_fitness_std_from_array(dists_vals_all::Array{Float64,2}, dists_keys_all::Vector{String}; dists_include::Vector{String}, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+    num_evals, n_dists = size(dists_vals_all)
+    @assert length(dists_include) <= length(dists_keys_all) == n_dists
+
+    dists_mean_all = transpose(mean(dists_vals_all, dims=1))[:,] # array of mean distances for each individual distance
+    dists_rms_all = transpose(sqrt.(mean(dists_vals_all .^2, dims=1)))[:,] # array of rms (std around 0)  distances for each individual distance
+
+    weights_all = 1 ./ dists_rms_all
+    weights = Dict([(dists_keys_all[i], weights_all[i]) for i in 1:n_dists])
+
+    dists_w_all = zeros(num_evals,length(weights_all))
+    for i in 1:num_evals
+        dists_w_all[i,:] = dists_vals_all[i,:]  .* weights_all
+    end
+    id_dists_used = [findfirst(dists_keys_all .== key) for key in dists_include]
+    dists_w_used = view(dists_w_all, :, id_dists_used)
+
+    dists_w_mean_all = transpose(mean(dists_w_all, dims=1))[:,] # array of mean weighted distances for each individual distance
+    totdist_w_mean_all = mean(sum(dists_w_all, dims=2)) # mean weighted total distance
+    totdist_w_mean_used = mean(sum(dists_w_used, dims=2))
+    totdist_w_std_all = std(sum(dists_w_all, dims=2)) # std of weighted total distance
+    totdist_w_std_used = std(sum(dists_w_used, dims=2))
+
+    println("#")
+    println("Dists_mean_all: ", dists_mean_all)
+    println("Dists_rms_all: ", dists_rms_all)
+    println("Weights_all (1/dists_rms_all): ", weights_all)
+    println("Dists_w_mean_all: ", dists_w_mean_all, [totdist_w_mean_all])
+    println("# Total weighted distance (all terms): ", totdist_w_mean_all, " +/- ", totdist_w_std_all)
+    println("# Total weighted distance (used terms): ", totdist_w_mean_used, " +/- ", totdist_w_std_used)
+    if save_dist && !isnothing(f)
+        println(f, "#")
+        println(f, "Dists_mean_all: ", dists_mean_all)
+        println(f, "Dists_rms_all: ", dists_rms_all)
+        println(f, "Weights_all (1/dists_rms_all): ", weights_all)
+        println(f, "Dists_w_mean_all: ", dists_w_mean_all, [totdist_w_mean_all])
+        println(f, "# Total weighted distance (all terms): ", totdist_w_mean_all, " +/- ", totdist_w_std_all)
+        println(f, "# Total weighted distance (used terms): ", totdist_w_mean_used, " +/- ", totdist_w_std_used)
+    end
+
+    return (weights, totdist_w_mean_used, totdist_w_std_used)
+end
+
+
+
+"""
+    compute_weights_target_fitness_std_perfect_model(num_evals, sim_param; ss_ref, AD_mod=true, save_dist=true, f=nothing)
+
+Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, by simulating the same model many times.
+
+# Arguments:
+- `num_evals::Int64`: number of times to simulate the same model to compare to the reference model.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `ss_ref::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of the reference catalog.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+
+# Returns:
+- `active_param_true::Vector{Float64}`: a vector of the active model parameters assumed for the 'perfect' model.
+- `weights::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms.
+- `totdist_w_mean::Float64`: the mean of the total weighted distance.
+- `totdist_w_std::Float64`: the standard deviation of the total weighted distance.
+NOTE: CURRENTLY DOES NOT SAVE OUTPUTS FOR WORKERS IF USING MULTIPLE PROCESSORS
+"""
+function compute_weights_target_fitness_std_perfect_model(num_evals::Int64, sim_param::SimParam; ss_ref::ExoplanetsSysSim.CatalogSummaryStatistics, AD_mod::Bool=true, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+    t_elapsed = @elapsed begin
+        active_param_true = make_vector_of_sim_param(sim_param)
+        println("# True values: ", active_param_true)
+        if save_dist && !isnothing(f)
+            println(f, "# AD_mod: ", AD_mod)
+            println(f, "# Format: Counts: [observed multiplicities][total planets, total planet pairs]")
+            println(f, "# Format: Dists_keys_all: [names of distance terms]")
+            println(f, "# Format: Dists_vals_all: [distance terms]")
+        end
+
+        # Simulate the same catalog once to get the total number of distance terms and their keys:
+        dists, counts, summary_stat = simulate_catalog_and_calc_all_distances_dict(active_param_true, sim_param; ss_fit=ss_ref, AD_mod=AD_mod)
+        dists_keys_all = collect(keys(dists))
+        n_dists = length(dists_keys_all) # total number of individual distance terms
+
+        # Simulate the same catalog for 'num_evals' times, calculating and saving the distances:
+        if nprocs() == 1
+            dists_vals_all = zeros(num_evals,n_dists)
+            for i in 1:num_evals
+                dists, counts, summary_stat = simulate_catalog_and_calc_all_distances_dict(active_param_true, sim_param; ss_fit=ss_ref, AD_mod=AD_mod)
+                dists_vals_all[i,:] .= values(dists)
+
+                # Print and/or write the distances to file:
+                println("Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]])
+                println("Dists_keys_all: ", keys(dists))
+                println("Dists_vals_all: ", values(dists))
+                if save_dist && !isnothing(f)
+                    println(f, "Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]])
+                    println(f, "Dists_keys_all: ", keys(dists))
+                    println(f, "Dists_vals_all: ", values(dists))
+                end
+            end
+        else # if nprocs() > 1
+            @passobj 1 workers() ss_ref # send 'ss_ref' to all workers
+
+            dists_vals_all = SharedArray{Float64,2}(num_evals,n_dists)
+            @sync @distributed for i in 1:num_evals
+                dists, counts, summary_stat = simulate_catalog_and_calc_all_distances_dict(active_param_true, sim_param; ss_fit=ss_ref, AD_mod=AD_mod)
+                dists_vals_all[i,:] .= values(dists)
+
+                # Print and/or write the distances to file:
+                println("Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]])
+                println("Dists_keys_all: ", keys(dists))
+                println("Dists_vals_all: ", values(dists))
+                if save_dist && !isnothing(f)
+                    println(f, "Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]])
+                    println(f, "Dists_keys_all: ", keys(dists))
+                    println(f, "Dists_vals_all: ", values(dists))
+                end
+            end
+            dists_vals_all = Array(dists_vals_all) # convert SharedArray to Array so we can pass it to the function below
+        end
+
+    end
+
+    weights, totdist_w_mean, totdist_w_std = compute_weights_target_fitness_std_from_array(dists_vals_all, dists_keys_all; dists_include=dists_keys_all, save_dist=save_dist, f=f)
+
+    println("#")
+    println("# elapsed time: ", t_elapsed, " seconds")
+    println("#")
+    if save_dist && !isnothing(f)
+        println(f, "#")
+        println(f, "# elapsed time: ", t_elapsed, " seconds")
+        println(f, "#")
+    end
+
+    return (active_param_true, weights, totdist_w_mean, totdist_w_std)
+end
+
+
+
+"""
+    compute_weights_target_fitness_std_perfect_model_split_stars(num_evals, sim_param; stellar_catalog_all, ss_refs, AD_mod=true, save_dist=true, f=nothing)
+
+Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, by simulating the same model many times.
+
+# Arguments:
+- `num_evals::Int64`: number of times to simulate the same model to compare to the reference model.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `stellar_catalog_all::Array{String,1}`: names of the split stellar catalog files.
+- `ss_refs::Array{ExoplanetsSysSim.CatalogSummaryStatistics,1}`: array of objects containing the summary statistics of the reference catalogs.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+
+# Returns:
+- `active_param_true::Vector{Float64}`: a vector of the active model parameters assumed for the 'perfect' model.
+- `weights1::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms for the first split sample.
+- `weights2::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms for the second split sample.
+- `weightsc::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms for the combined sample.
+- `totdist_w_mean::Float64`: the mean of the total weighted distance.
+- `totdist_w_std::Float64`: the standard deviation of the total weighted distance.
+"""
+function compute_weights_target_fitness_std_perfect_model_split_stars(num_evals::Int64, sim_param::SimParam; stellar_catalog_all::Array{String,1}, ss_refs::Array{ExoplanetsSysSim.CatalogSummaryStatistics,1}, AD_mod::Bool=true, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+    t_elapsed = @elapsed begin
+        active_param_true = make_vector_of_sim_param(sim_param)
+        println("# True values: ", active_param_true)
+        if save_dist && !isnothing(f)
+            println(f, "# AD_mod: ", AD_mod)
+            println(f, "# Format: Counts: [observed multiplicities][total planets, total planet pairs]")
+            println(f, "# Format: Dists_keys_all: [names of distance terms]")
+            println(f, "# Format: Dists_vals_all: [distance terms]")
+        end
+
+        # Simulate a catalog once to get the total number of distance terms and their keys:
+        dists, counts, summary_stat = simulate_catalog_and_calc_all_distances_dict(active_param_true, sim_param; ss_fit=ss_refs[1], AD_mod=AD_mod)
+        dists_keys_all = collect(keys(dists))
+        n_dists = length(dists_keys_all) # total number of individual distance terms
+
+        # Simulate the same catalog for 'num_evals' times, calculating and saving the distances:
+        dists1_vals_all = zeros(num_evals,n_dists)
+        dists2_vals_all = zeros(num_evals,n_dists)
+        distsc_vals_all = zeros(num_evals,n_dists)
+        for i in 1:num_evals
+            add_param_fixed(sim_param,"stellar_catalog", stellar_catalog_all[1])
+            stellar_catalog = ExoplanetsSysSim.StellarTable.setup_star_table(sim_param; force_reread=true)
+            dists1, counts1, ss1 = simulate_catalog_and_calc_all_distances_dict(active_param_true, sim_param; ss_fit=ss_refs[1], AD_mod=AD_mod)
+
+            add_param_fixed(sim_param,"stellar_catalog", stellar_catalog_all[2])
+            stellar_catalog = ExoplanetsSysSim.StellarTable.setup_star_table(sim_param; force_reread=true)
+            dists2, counts2, ss2 = simulate_catalog_and_calc_all_distances_dict(active_param_true, sim_param; ss_fit=ss_refs[2], AD_mod=AD_mod)
+
+            # Combine the input catalogs and the simulated catalogs:
+            ssc_fit = combine_summary_stats(ss_refs[1], ss_refs[2])
+            ssc = combine_summary_stats(ss1, ss2)
+
+            # Compute the distances for the combined simulated catalog as compared to the combined input catalog:
+            distsc, countsc = calc_all_distances_dict(sim_param, ssc, ssc_fit; AD_mod=AD_mod)
+
+            dists1_vals_all[i,:] .= values(dists1)
+            dists2_vals_all[i,:] .= values(dists2)
+            distsc_vals_all[i,:] .= values(distsc)
+
+            # Print and/or write the distances to file:
+            println("[$(stellar_catalog_all[1])] Counts: ", counts1["Nmult1"], [counts1["n_pl1"], counts1["n_pairs1"]])
+            println("Dists1_keys_all: ", keys(dists1))
+            println("Dists1_vals_all: ", values(dists1))
+            println("[$(stellar_catalog_all[2])] Counts: ", counts2["Nmult1"], [counts2["n_pl1"], counts2["n_pairs1"]])
+            println("Dists2_keys_all: ", keys(dists2))
+            println("Dists2_vals_all: ", values(dists2))
+            println("[Combined] Counts: ", countsc["Nmult1"], [countsc["n_pl1"], countsc["n_pairs1"]])
+            println("Distsc_keys_all: ", keys(distsc))
+            println("Distsc_vals_all: ", values(distsc))
+            println("#")
+            if save_dist && !isnothing(f)
+                println(f, "[$(stellar_catalog_all[1])] Counts: ", counts1["Nmult1"], [counts1["n_pl1"], counts1["n_pairs1"]])
+                println(f, "Dists1_keys_all: ", keys(dists1))
+                println(f, "Dists1_vals_all: ", values(dists1))
+                println(f, "[$(stellar_catalog_all[2])] Counts: ", counts2["Nmult1"], [counts2["n_pl1"], counts2["n_pairs1"]])
+                println(f, "Dists2_keys_all: ", keys(dists2))
+                println(f, "Dists2_vals_all: ", values(dists2))
+                println(f, "[Combined] Counts: ", countsc["Nmult1"], [countsc["n_pl1"], countsc["n_pairs1"]])
+                println(f, "Distsc_keys_all: ", keys(distsc))
+                println(f, "Distsc_vals_all: ", values(distsc))
+                println(f, "#")
+            end
+        end
+    end
+
+    weights1, totdist_w_mean1, totdist_w_std1 = compute_weights_target_fitness_std_from_array(dists1_vals_all, dists_keys_all; dists_include=dists_keys_all, save_dist=save_dist, f=f)
+    weights2, totdist_w_mean2, totdist_w_std2 = compute_weights_target_fitness_std_from_array(dists2_vals_all, dists_keys_all; dists_include=dists_keys_all, save_dist=save_dist, f=f)
+    weightsc, totdist_w_mean_combined, totdist_w_std_combined = compute_weights_target_fitness_std_from_array(distsc_vals_all, dists_keys_all; dists_include=dists_keys_all, save_dist=save_dist, f=f)
+
+    totdist_w_mean = totdist_w_mean1 + totdist_w_mean2 + totdist_w_mean_combined
+    totdist_w_std = sqrt(totdist_w_std1^2 + totdist_w_std2^2 + totdist_w_std_combined^2)
+
+    println("#")
+    println("# Total weighted distance (all terms): ", totdist_w_mean, " +/- ", totdist_w_std)
+    println("# elapsed time: ", t_elapsed, " seconds")
+    println("#")
+    if save_dist && !isnothing(f)
+        println(f, "#")
+        println(f, "# Total weighted distance (all terms): ", totdist_w_mean, " +/- ", totdist_w_std)
+        println(f, "# elapsed time: ", t_elapsed, " seconds")
+        println(f, "#")
+    end
+
+    return (active_param_true, weights1, weights2, weightsc, totdist_w_mean, totdist_w_std)
+end
+
+
+
+"""
+    compute_weights_target_fitness_std_from_file(file_name, num_evals, sim_param; dists_include, save_dist=true, f=nothing)
+
+Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, by loading a file with the same model simulated many times.
+
+# Arguments:
+- `file_name::String`: name of file with the precomputed distances.
+- `num_evals::Int64`: number of times to simulate the same model to compare to the reference model.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `dists_include::Vector{String}`: a vector of strings for the names of the distance terms to be included in the total distance.
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+NOTE: `dists_include` specifies which distance terms are included in calculating the mean and standard deviation of the total weighted distance, but ALL the distance terms and their weights are returned regardless.
+
+# Returns:
+- `active_param_true::Vector{Float64}`: a vector of the active model parameters assumed for the 'perfect' model.
+- `weights::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms.
+- `totdist_w_mean_used::Float64`: the total weighted distance including only distance terms in `dists_include`.
+- `totdist_w_std_used::Float64`: the standard deviation of the total weighted distance including only distance terms in `dists_include`.
+"""
+function compute_weights_target_fitness_std_from_file(file_name::String, num_evals::Int64, sim_param::SimParam; dists_include::Vector{String}, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+    t_elapsed = @elapsed begin
+        active_param_true = make_vector_of_sim_param(sim_param)
+        println("# True values: ", active_param_true)
+        println("# Computing weights from pre-computed file.")
+        if save_dist && !isnothing(f)
+            println(f, "# Computing weights from pre-computed file.")
+        end
+
+        # Read the number of distance terms and their names:
+        dists_keys_all = String[]
+        open(file_name) do f_weights
+            for (i,line) in enumerate(eachline(f_weights))
+                if length(line) > 14
+                    if line[1:14] == "Dists_keys_all"
+                        dists_keys_all_str = split(line[19:end-2], "\", \"")
+                        append!(dists_keys_all, dists_keys_all_str)
+                        break
+                    end
+                end
+            end
+        end
+
+        # Read the distance terms for each simulation:
+        dists_vals_all = zeros(num_evals,length(dists_keys_all))
+        open(file_name) do f_weights
+            eval_count = 1
+            for (i,line) in enumerate(eachline(f_weights))
+                if length(line) > 14
+                    if line[1:14] == "Dists_vals_all"
+                        dists_vals_all_str = split(line[19:end-1], ", ")
+                        dists_vals_all[eval_count,:] = [parse(Float64, x) for x in dists_vals_all_str]
+                        eval_count += 1
+                    end
+                end
+            end
+        end
+
+    end
+
+    weights, totdist_w_mean_used, totdist_w_std_used = compute_weights_target_fitness_std_from_array(dists_vals_all, dists_keys_all; dists_include=dists_include, save_dist=save_dist, f=f)
+
+    println("#")
+    println("# elapsed time: ", t_elapsed, " seconds")
+    println("#")
+    if save_dist && !isnothing(f)
+        println(f, "#")
+        println(f, "# elapsed time: ", t_elapsed, " seconds")
+        println(f, "#")
+    end
+
+    return (active_param_true, weights, totdist_w_mean_used, totdist_w_std_used)
+end
+
+
+
+"""
+    compute_weights_target_fitness_std_from_file_split_samples(file_name, num_evals, sim_param; stellar_catalog_all, dists_include_all, dists_include_combined, save_dist=true, f=nothing)
+
+Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, by loading a file with the same model simulated many times.
+
+# Arguments:
+- `file_name::String`: name of file with the precomputed distances.
+- `num_evals::Int64`: number of times to simulate the same model to compare to the reference model.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `stellar_catalog_all::Array{String,1}`: names of the split stellar catalog files.
+- `dists_include_all::Array{Vector{String},1}`: array of vectors of strings for the names of the distance terms in the split samples to be included in the total distance.
+- `dists_include_combined::Vector{String}`: vector of strings for the names of the distance terms of the combined sample to be included in the total distance.
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+NOTE: `dists_include` specifies which distance terms are included in calculating the mean and standard deviation of the total weighted distance, but ALL the distance terms and their weights are returned regardless.
+
+# Returns:
+- `active_param_true::Vector{Float64}`: a vector of the active model parameters assumed for the 'perfect' model.
+- `weights1::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms for the first split sample.
+- `weights2::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms for the second split sample.
+- `weightsc::Dict{String,Float64}`: a dictionary containing weights for the individual distance terms for the combined sample.
+- `totdist_w_mean_used::Float64`: the total weighted distance including only distance terms in `dists_include_all` and `dists_include_combined`.
+- `totdist_w_std_used::Float64`: the standard deviation of the total weighted distance including only distance terms in `dists_include_all` and `dists_include_combined`.
+"""
+function compute_weights_target_fitness_std_from_file_split_samples(file_name::String, num_evals::Int64, sim_param::SimParam; stellar_catalog_all::Array{String,1}, dists_include_all::Array{Vector{String},1}, dists_include_combined::Vector{String}, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+    t_elapsed = @elapsed begin
+        active_param_true = make_vector_of_sim_param(sim_param)
+        println("# True values: ", active_param_true)
+        println("# Computing weights from pre-computed file.")
+        if save_dist && !isnothing(f)
+            println(f, "# Computing weights from pre-computed file.")
+        end
+
+        # Read the number of distance terms and their names:
+        dists1_keys_all = String[]
+        dists2_keys_all = String[]
+        distsc_keys_all = String[]
+        open(file_name) do f_weights
+            for (i,line) in enumerate(eachline(f_weights))
+                if length(line) > 15
+                    if line[1:15] == "Dists1_keys_all" && length(dists1_keys_all) == 0
+                        dists_keys_all_str = split(line[20:end-2], "\", \"")
+                        append!(dists1_keys_all, dists_keys_all_str)
+                    elseif line[1:15] == "Dists2_keys_all" && length(dists2_keys_all) == 0
+                        dists_keys_all_str = split(line[20:end-2], "\", \"")
+                        append!(dists2_keys_all, dists_keys_all_str)
+                    elseif line[1:15] == "Distsc_keys_all" && length(distsc_keys_all) == 0
+                        dists_keys_all_str = split(line[20:end-2], "\", \"")
+                        append!(distsc_keys_all, dists_keys_all_str)
+                    end
+                end
+            end
+        end
+
+        # Read the distance terms for each simulation:
+        dists1_vals_all = zeros(num_evals,length(dists1_keys_all))
+        dists2_vals_all = zeros(num_evals,length(dists2_keys_all))
+        distsc_vals_all = zeros(num_evals,length(distsc_keys_all))
+        open(file_name) do f_weights
+            eval1_count, eval2_count, evalc_count = 1, 1, 1
+            for (i,line) in enumerate(eachline(f_weights))
+                if length(line) > 15
+                    if line[1:15] == "Dists1_vals_all"
+                        dists_vals_all_str = split(line[20:end-1], ", ")
+                        dists1_vals_all[eval1_count,:] = [parse(Float64, x) for x in dists_vals_all_str]
+                        eval1_count += 1
+                    elseif line[1:15] == "Dists2_vals_all"
+                        dists_vals_all_str = split(line[20:end-1], ", ")
+                        dists2_vals_all[eval2_count,:] = [parse(Float64, x) for x in dists_vals_all_str]
+                        eval2_count += 1
+                    elseif line[1:15] == "Distsc_vals_all"
+                        dists_vals_all_str = split(line[20:end-1], ", ")
+                        distsc_vals_all[evalc_count,:] = [parse(Float64, x) for x in dists_vals_all_str]
+                        evalc_count += 1
+                    end
+                end
+            end
+        end
+
+    end
+
+    weights1, totdist_w_mean_used1, totdist_w_std_used1 = compute_weights_target_fitness_std_from_array(dists1_vals_all, dists1_keys_all; dists_include=dists_include_all[1], save_dist=save_dist, f=f)
+    weights2, totdist_w_mean_used2, totdist_w_std_used2 = compute_weights_target_fitness_std_from_array(dists2_vals_all, dists2_keys_all; dists_include=dists_include_all[2], save_dist=save_dist, f=f)
+    weightsc, totdist_w_mean_used_combined, totdist_w_std_used_combined = compute_weights_target_fitness_std_from_array(distsc_vals_all, distsc_keys_all; dists_include=dists_include_combined, save_dist=save_dist, f=f)
+
+    totdist_w_mean_used = totdist_w_mean_used1 + totdist_w_mean_used2 + totdist_w_mean_used_combined
+    totdist_w_std_used = sqrt(totdist_w_std_used1^2 + totdist_w_std_used2^2 + totdist_w_std_used_combined^2)
+
+    println("#")
+    println("# Total weighted distance (all used terms): ", totdist_w_mean_used, " +/- ", totdist_w_std_used)
+    println("# elapsed time: ", t_elapsed, " seconds")
+    println("#")
+    if save_dist && !isnothing(f)
+        println(f, "#")
+        println(f, "# Total weighted distance (all used terms): ", totdist_w_mean_used, " +/- ", totdist_w_std_used)
+        println(f, "# elapsed time: ", t_elapsed, " seconds")
+        println(f, "#")
+    end
+
+    return (active_param_true, weights1, weights2, weightsc, totdist_w_mean_used, totdist_w_std_used)
 end

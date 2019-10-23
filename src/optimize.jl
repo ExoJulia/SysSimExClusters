@@ -1,6 +1,7 @@
 include("clusters.jl")
 include("planetary_catalog.jl")
 include("optimization.jl")
+using Random
 
 sim_param = setup_sim_param_model()
 
@@ -10,15 +11,13 @@ sim_param = setup_sim_param_model()
 
 ##### To start saving the model iterations in the optimization into a file:
 
-model_name = "Clustered_P_R_broken_R_optimization"
+model_name = "Clustered_P_R_optimization"
 optimization_number = "_random"*ARGS[1] # if want to run on the cluster with random initial active parameters: "_random"*ARGS[1]
-use_KS_or_AD = "KS" # 'KS' or 'AD' or 'Both' (need to be careful counting indices for 'dists_exclude'!!!)
 AD_mod = true
-Kep_or_Sim = "Kep" # 'Kep' or 'Sim'
 num_targs = 79935
 max_incl_sys = 0.
 max_evals = 5000
-dists_exclude = [2,3,8,12,13,15,16,17] # Int64[] if want to include all distances
+dists_include = ["delta_f", "mult_CRPD_r", "periods_KS", "pratios_KS", "durations_KS", "xis_KS", "xis_nonmmr_KS", "xis_mmr_KS", "depths_KS", "rratios_KS"]
 Pop_per_param = 4
 
 file_name = model_name*optimization_number*"_targs$(num_targs)_evals$(max_evals).txt"
@@ -30,22 +29,23 @@ write_model_params(f, sim_param)
 
 
 
-##### To run the same model multiple times to see how it compares to a simulated catalog with the same parameters:
+##### To load a file with the weights, and simulate a reference catalog if we want to fit to a model:
 
-using Random
-Random.seed!(1234) # to have the same reference catalog and simulated catalogs for calculating the weights
-
-# To generate a simulated catalog to fit to:
+# To generate a reference catalog, if we want to fit to a simulated catalog instead of data:
+#=
+Random.seed!(1234) # to have the same reference catalog
 cat_phys = generate_kepler_physical_catalog(sim_param)
 cat_phys_cut = ExoplanetsSysSim.generate_obs_targets(cat_phys,sim_param)
 cat_obs = observe_kepler_targets_single_obs(cat_phys_cut,sim_param)
 summary_stat_ref = calc_summary_stats_model(cat_obs,sim_param)
+=#
 
 # To simulate more observed planets for the subsequent model generations:
 add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
-add_param_fixed(sim_param,"max_incl_sys", max_incl_sys) # degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
+add_param_fixed(sim_param,"max_incl_sys", max_incl_sys)
 
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_broken_R_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
+# To load and compute the weights, target distance, and target distance std from a precomputed file:
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, sim_param; dists_include=dists_include)
 
 
 
@@ -88,16 +88,18 @@ if length(transformed_indices) > 0
 end
 println(f, "# Method: adaptive_de_rand_1_bin_radiuslimited")
 println(f, "# PopulationSize: ", PopSize)
-println(f, "# Format: Active_params: [active parameter values]")
-println(f, "# Format: Dist: [distances][total distance]")
-println(f, "# Format: Dist_weighted: [weighted distances][total weighted distance]")
-println(f, "# Distances used: ", use_KS_or_AD)
 println(f, "# AD_mod: ", AD_mod)
+println(f, "# Distances used: ", dists_include)
+println(f, "#")
+println(f, "# Format: Active_params: [active parameter values]")
+println(f, "# Format: Counts: [observed multiplicities][total planets, total planet pairs]")
+println(f, "# Format: Dists_keys_used: [names of distance terms]")
+println(f, "# Format: Dists_vals_used: [distance terms][sum of distance terms]")
+println(f, "# Format: Dists_vals_used_w: [weighted distance terms][sum of weighted distance terms]")
 println(f, "#")
 
-#target_function(active_param_start, use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true) #to simulate the model once with the drawn parameters before starting the optimization
-target_function_transformed_params(active_param_transformed_start, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true) # to simulate the model once with the drawn parameters before starting the optimization
-
+target_function(active_param_start, sim_param; ss_fit=ssk, dists_include=dists_include, weights=weights, AD_mod=AD_mod, f=f)
+target_function_transformed_params(active_param_transformed_start, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], sim_param; ss_fit=ssk, dists_include=dists_include, weights=weights, AD_mod=AD_mod, f=f)
 
 
 
@@ -109,12 +111,13 @@ target_function_transformed_params(active_param_transformed_start, transformed_i
 using BlackBoxOptim              # see https://github.com/robertfeldt/BlackBoxOptim.jl for documentation
 
 t_elapsed = @elapsed begin
-    #opt_result = bboptimize(active_params -> target_function(active_params, use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
+    #opt_result = bboptimize(active_params -> target_function(active_params, sim_param; ss_fit=ssk, dists_include=dists_include, weights=weights, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
 
-    opt_result = bboptimize(active_params -> target_function_transformed_params(active_params, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
+    opt_result = bboptimize(active_params -> target_function_transformed_params(active_params, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], sim_param; ss_fit=ssk, dists_include=dists_include, weights=weights, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
 end
 
 println(f, "# best_candidate: ", best_candidate(opt_result))
 println(f, "# best_fitness: ", best_fitness(opt_result))
 println(f, "# elapsed time: ", t_elapsed, " seconds")
 close(f)
+

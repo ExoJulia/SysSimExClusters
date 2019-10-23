@@ -237,3 +237,67 @@ function test_distance()
   summary_stat_obs = calc_summary_stats_model(cat_obs,sim_param)
   dist = calc_distance_model(summary_stat_ref,summary_stat_obs,sim_param)
 end
+
+
+
+
+
+"""
+    calc_all_distances_dict(sim_param, ss1, ss2; AD_mod=true)
+
+Compute and return the distances between two planet catalogs as a dictionary.
+
+# Arguments:
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `ss1::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of a catalog.
+- `ss2::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of another catalog.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+
+# Returns:
+- `dists::Dict{String,Float64}`: a dictionary containing the individual distance terms.
+- `counts::Dict{String,Any}`: a dictionary containing the multiplicities, numbers of planets, and planet pairs.
+
+NOTE: individual distance terms are set to `Inf` if they cannot be computed (i.e. if not enough planets)!
+"""
+function calc_all_distances_dict(sim_param::SimParam, ss1::ExoplanetsSysSim.CatalogSummaryStatistics, ss2::ExoplanetsSysSim.CatalogSummaryStatistics; AD_mod::Bool=true)
+
+    max_incl_sys = get_real(sim_param, "max_incl_sys")
+    cos_factor = cos(max_incl_sys*pi/180)
+
+    Nmult1 = ss1.stat["num n-tranet systems"]
+    Nmult2 = ss2.stat["num n-tranet systems"]
+    M_obs1 = Int64[] # array to be filled with the number of transiting planets in each simulated system for ss1
+    M_obs2 = Int64[] # array to be filled with the number of transiting planets in each simulated system for ss2
+    max_k1, max_k2 = length(Nmult1), length(Nmult2)
+    for k in 1:max_k1
+        append!(M_obs1, k*ones(Int64, Nmult1[k]))
+    end
+    for k in 1:max_k2
+        append!(M_obs2, k*ones(Int64, Nmult2[k]))
+    end
+    n_pl1, n_pairs1 = sum(Nmult1 .* collect(1:max_k1)), sum(Nmult1[2:end] .* collect(1:max_k1-1)) # total numbers of planets, and planet pairs
+    n_pl2, n_pairs2 = sum(Nmult2 .* collect(1:max_k2)), sum(Nmult2[2:end] .* collect(1:max_k2-1)) # total numbers of planets, and planet pairs
+
+    # Make a dictionary for the planet counts (multiplicity, total planets, total planet pairs):
+    counts = Dict("Nmult1"=>Nmult1, "Nmult2"=>Nmult2, "n_pl1"=>n_pl1, "n_pl2"=>n_pl2, "n_pairs1"=>n_pairs1, "n_pairs2"=>n_pairs2)
+
+    # Initialize a dictionary for all the distances:
+    dists = Dict{String,Float64}()
+
+    # Compute distances for rates of planets:
+    dists["delta_f"] = abs(ss1.stat["num_tranets"]/(ss1.stat["num targets"]/cos_factor) - ss2.stat["num_tranets"]/(ss2.stat["num targets"]))
+    dists["mult_KS"] = ExoplanetsSysSim.ksstats_ints(M_obs1, M_obs2)[5]
+    dists["mult_CRPD"] = ExoplanetsSysSim.CRPDstats([Nmult1[1:4]; sum(Nmult1[5:end])], [Nmult2[1:4]; sum(Nmult2[5:end])]) # NOTE: binning 5+ planet systems together
+    dists["mult_CRPD_r"] = ExoplanetsSysSim.CRPDstats([Nmult2[1:4]; sum(Nmult2[5:end])], [Nmult1[1:4]; sum(Nmult1[5:end])]) # NOTE: binning 5+ planet systems together
+
+    # Compute KS and AD distances for the marginals:
+    ADdist = AD_mod ? ExoplanetsSysSim.ADstats_mod : ExoplanetsSysSim.ADstats
+    obs = ["periods", "pratios", "durations", "xis", "xis_nonmmr", "xis_mmr", "depths", "depths_above", "depths_below", "rratios", "rratios_above", "rratios_below", "rratios_across"]
+    for (i,key) in enumerate(obs)
+        # NOTE: if the KS or AD distance cannot be computed (i.e. not enough observed planets), assign Inf
+        dists[key*"_KS"] = min(length(ss1.stat[key]), length(ss2.stat[key]))>0 ? ExoplanetsSysSim.ksstats(ss1.stat[key], ss2.stat[key])[5] : Inf
+        dists[key*"_AD"] = min(length(ss1.stat[key]), length(ss2.stat[key]))>1 ? ADdist(ss1.stat[key], ss2.stat[key]) : Inf
+    end
+
+    return (dists, counts)
+end

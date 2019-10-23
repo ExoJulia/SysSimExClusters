@@ -102,9 +102,11 @@ function write_model_params(f, sim_param::SimParam)
     println(f, "# num_targets_sim_pass_one: ", get_int(sim_param,"num_targets_sim_pass_one"))
     println(f, "# max_incl_sys: ", get_real(sim_param,"max_incl_sys"))
     println(f, "# f_stars_with_planets_attempted: ", get_real(sim_param,"f_stars_with_planets_attempted"))
+    println(f, "# generate_num_clusters: ", string(get_function(sim_param,"generate_num_clusters")))
     println(f, "# log_rate_clusters: ", get_real(sim_param,"log_rate_clusters"))
     println(f, "# max_clusters_in_sys: ", get_int(sim_param,"max_clusters_in_sys"))
     if string(get_function(sim_param,"generate_planetary_system")) == "generate_planetary_system_clustered"
+        println(f, "# generate_num_planets_in_cluster: ", string(get_function(sim_param,"generate_num_planets_in_cluster")))
         println(f, "# log_rate_planets_per_cluster: ", get_real(sim_param,"log_rate_planets_per_cluster"))
         println(f, "# max_planets_in_clusters: ", get_int(sim_param,"max_planets_in_cluster"))
     end
