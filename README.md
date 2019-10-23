@@ -2,6 +2,8 @@
 
 This repository provides a comprehensive model for Clustered Planetary Systems for SysSim. The details of the specific models for exoplanetary systems are described in our paper ([arXiv link to paper](https://arxiv.org/abs/1907.07773); it is currently in the referee stage).
 
+<center><img src="/best_models/Clustered_P_R_observed.gif" alt="Best fit clustered models" width="800"/></center>  
+
 
 
 ## How to use our Clustered model for studying exoplanetary system populations:
