@@ -205,24 +205,34 @@ end
 
 
 """
-    calc_summary_stats_collection_Kepler(names_samples, stellar_catalog_samples, planets_cleaned_samples)
+    calc_summary_stats_collection_Kepler(stellar_catalog, planet_catalog, names_samples, star_id_samples, sim_param)
 
-Compute the summary statistics of a Kepler planet catalog given a number of samples (divisions in stellar and planet catalogs) and compile them into dictionaries in a `CatalogSummaryStatisticsCollection` object.
+Compute the summary statistics of a Kepler planet catalog given a number of samples (divisions in stellar catalogs) and compile them into dictionaries in a `CatalogSummaryStatisticsCollection` object.
 
 # Arguments:
+- `stellar_catalog::DataFrame`: table of stars.
+- `planet_catalog::DataFrame`: table of planets.
 - `names_samples::Vector{String}`: names of the samples.
-- `stellar_catalog_samples::Vector{DataFrame}`: tables of target stars in each sample.
-- `planets_cleaned_samples::Vector{DataFrame}`: tables of planet candidates around the stars in each sample in `stellar_catalog_samples`.
+- `star_id_samples::Vector{Vector{Int64}}`: list of lists of target stars in each sample.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
 
 # Returns:
 - `cssc::CatalogSummaryStatisticsCollection`: object containing a CatalogSummaryStatistics object for each stellar sample.
 """
-function calc_summary_stats_collection_Kepler(names_samples::Vector{String}, stellar_catalog_samples::Vector{DataFrame}, planets_cleaned_samples::Vector{DataFrame})
-    @assert length(names_samples) == length(stellar_catalog_samples) == length(planets_cleaned_samples)
+function calc_summary_stats_collection_Kepler(stellar_catalog::DataFrame, planet_catalog::DataFrame, names_samples::Vector{String}, star_id_samples::Vector{Vector{Int64}}, sim_param::SimParam)
+    @assert length(names_samples) == length(star_id_samples)
+
+    @time planets_cleaned = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog, recompute_radii=true)
 
     cssc = CatalogSummaryStatisticsCollection()
+    cssc.star_id_samples["all"] = collect(1:size(stellar_catalog,1))
+    cssc.css_samples["all"] = calc_summary_stats_Kepler(stellar_catalog, planets_cleaned)
+
     for (i,name) in enumerate(names_samples)
-        cssc.css_samples[name] = calc_summary_stats_Kepler(stellar_catalog_samples[i], planets_cleaned_samples[i])
+        stellar_catalog_sample = stellar_catalog[star_id_samples[i],:]
+        @time planets_cleaned_sample = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog_sample)
+        cssc.star_id_samples[name] = star_id_samples[i]
+        cssc.css_samples[name] = calc_summary_stats_Kepler(stellar_catalog_sample, planets_cleaned_sample)
     end
     return cssc
 end
@@ -235,9 +245,5 @@ bprp = stellar_catalog[:bp_rp]
 med_bprp = median(bprp)
 idx_bluer = collect(1:size(stellar_catalog,1))[bprp .< med_bprp]
 idx_redder = collect(1:size(stellar_catalog,1))[bprp .>= med_bprp]
-stellar_catalog_bluer = stellar_catalog[idx_bluer,:]
-stellar_catalog_redder = stellar_catalog[idx_redder,:]
-@time planets_cleaned_bluer = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog_bluer)
-@time planets_cleaned_redder = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog_redder)
 
-cssck = calc_summary_stats_collection_Kepler(["all", "bluer", "redder"], [stellar_catalog, stellar_catalog_bluer, stellar_catalog_redder], [planets_cleaned, planets_cleaned_bluer, planets_cleaned_redder])
+cssck = calc_summary_stats_collection_Kepler(stellar_catalog, planet_catalog, ["bluer", "redder"], [idx_bluer, idx_redder], sim_param)
