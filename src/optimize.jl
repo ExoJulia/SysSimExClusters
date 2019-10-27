@@ -17,7 +17,7 @@ AD_mod = true
 num_targs = 79935
 max_incl_sys = 0.
 max_evals = 5000
-dists_include = ["delta_f", "mult_CRPD_r", "periods_KS", "pratios_KS", "durations_KS", "xis_KS", "xis_nonmmr_KS", "xis_mmr_KS", "depths_KS", "rratios_KS"]
+dists_include = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 Pop_per_param = 4
 
 file_name = model_name*optimization_number*"_targs$(num_targs)_evals$(max_evals).txt"
@@ -45,7 +45,7 @@ add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
 add_param_fixed(sim_param,"max_incl_sys", max_incl_sys)
 
 # To load and compute the weights, target distance, and target distance std from a precomputed file:
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, sim_param; dists_include=dists_include)
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, sim_param; dists_include=dists_include, f=f)
 
 
 

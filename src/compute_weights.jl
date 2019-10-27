@@ -61,5 +61,5 @@ active_param_true, weights, target_fitness, target_fitness_std = compute_weights
 
 # Test the loading of the weights file:
 
-#dists_include = ["delta_f", "mult_CRPD_r", "periods_KS", "pratios_KS", "durations_KS", "xis_KS", "xis_nonmmr_KS", "xis_mmr_KS", "depths_KS", "rratios_KS"]
-#active_param_true2, weights2, target_fitness2, target_fitness_std2 = compute_weights_target_fitness_std_from_file("$(file_name_base)_worker$(myid()).txt", num_evals_weights, sim_param; dists_include=dists_include)
+#dists_include = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
+#active_param_true2, weights2, target_fitness2, target_fitness_std2 = compute_weights_target_fitness_std_from_file("$(file_name_base)_worker$(myid()).txt", num_evals_weights, sim_param; dists_include=dists_include, save_dist=false)

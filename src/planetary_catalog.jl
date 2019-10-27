@@ -202,6 +202,8 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
     return CatalogSummaryStatistics(stat, Dict{String,Any}())
 end
 
+ssk = calc_summary_stats_Kepler(stellar_catalog, planets_cleaned)
+
 
 
 """
@@ -236,14 +238,3 @@ function calc_summary_stats_collection_Kepler(stellar_catalog::DataFrame, planet
     end
     return cssc
 end
-
-
-
-##### To split the stellar sample into redder and bluer halves and compute the summary statistics of each:
-
-bprp = stellar_catalog[:bp_rp]
-med_bprp = median(bprp)
-idx_bluer = collect(1:size(stellar_catalog,1))[bprp .< med_bprp]
-idx_redder = collect(1:size(stellar_catalog,1))[bprp .>= med_bprp]
-
-cssck = calc_summary_stats_collection_Kepler(stellar_catalog, planet_catalog, ["bluer", "redder"], [idx_bluer, idx_redder], sim_param)
