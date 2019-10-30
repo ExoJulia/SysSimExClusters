@@ -37,8 +37,8 @@ function calc_distance_num_planets(summary1::CatalogSummaryStatistics, summary2:
     np2 = haskey(summary2.stat,"num_tranets") ? summary2.stat["num_tranets"] : summary2.stat["expected planets detected"]
     #println("np1 = ",np1,", np2 = ",np2)
 
-    dist_np = dist_L1_abs(np1/summary1.stat["num targets"], np2/summary2.stat["num targets"])
-    #println("np1 (normalized) = ",np1/summary1.stat["num targets"],", np2 (normalized) = ",np2/summary2.stat["num targets"],", d = ",dist_np)
+    dist_np = dist_L1_abs(np1/summary1.stat["num_targets"], np2/summary2.stat["num_targets"])
+    #println("np1 (normalized) = ",np1/summary1.stat["num_targets"],", np2 (normalized) = ",np2/summary2.stat["num_targets"],", d = ",dist_np)
   return dist_np
 end
 
@@ -49,10 +49,10 @@ function calc_distance_num_planets_binned(summary1::CatalogSummaryStatistics, su
 
     dist_np_bin = zeros(length(np1))
     for n in 1:length(np1)
-      dist_np_bin[n] = dist_L1_abs(np1[n]/summary1.stat["num targets"], np2[n]/summary2.stat["num targets"])
+      dist_np_bin[n] = dist_L1_abs(np1[n]/summary1.stat["num_targets"], np2[n]/summary2.stat["num_targets"])
       #println("True # [Bin ", n,"] = ",np1[n],", Expected # [Bin ", n,"] = ",np2[n])
     end
-    #println("np1 (normalized) = ",np1/summary1.stat["num targets"],", np2 (normalized) = ",np2/summary2.stat["num targets"],", dist = ",dist_np_bin)
+    #println("np1 (normalized) = ",np1/summary1.stat["num_targets"],", np2 (normalized) = ",np2/summary2.stat["num_targets"],", dist = ",dist_np_bin)
   return dist_np_bin
 end
 
@@ -60,7 +60,7 @@ function calc_distance_num_n_tranet_systems(summary1::CatalogSummaryStatistics, 
   max_tranets_in_sys = get_int(sim_param,"max_tranets_in_sys")
   d = zeros(max_tranets_in_sys)
   for n in 1:max_tranets_in_sys
-    d[n] = dist_L1_abs(summary1.stat["num n-tranet systems"][n]/summary1.stat["num targets"], summary2.stat["num n-tranet systems"][n]/summary2.stat["num targets"])
+    d[n] = dist_L1_abs(summary1.stat["num_n-tranet_systems"][n]/summary1.stat["num_targets"], summary2.stat["num_n-tranet_systems"][n]/summary2.stat["num_targets"])
   end
   return d
 end
@@ -74,26 +74,26 @@ function calc_distance_mean_std_log_period_depth(summary1::CatalogSummaryStatist
 end
 
 function calc_distance_ks_period(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
-  samp1 = summary1.stat["P list"]
-  samp2 = summary2.stat["P list"]
+  samp1 = summary1.stat["periods"]
+  samp2 = summary2.stat["periods"]
   return ExoplanetsSysSim.ksstats(samp1,samp2)[5]
 end
 
 function calc_distance_ks_depth(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
-  samp1 = summary1.stat["depth list"]
-  samp2 = summary2.stat["depth list"]
+  samp1 = summary1.stat["depths"]
+  samp2 = summary2.stat["depths"]
   return ExoplanetsSysSim.ksstats(samp1,samp2)[5]
 end
 
 function calc_distance_ks_period_ratios(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
-  samp1 = summary1.stat["period_ratio_list"]
-  samp2 = summary2.stat["period_ratio_list"]
+  samp1 = summary1.stat["period_ratios"]
+  samp2 = summary2.stat["period_ratios"]
   return ExoplanetsSysSim.ksstats(samp1,samp2)[5]
 end
 
 function calc_distance_ks_duration_ratios(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
-  samp1 = summary1.stat["duration_ratio_list"]
-  samp2 = summary2.stat["duration_ratio_list"]
+  samp1 = summary1.stat["duration_ratios"]
+  samp2 = summary2.stat["duration_ratios"]
   return ExoplanetsSysSim.ksstats(samp1,samp2)[5]
 end
 
@@ -103,8 +103,8 @@ include("kde.jl")
 function calc_distance_kl_num_planets(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
     np1 = (haskey(summary1.stat,"num_tranets") ? summary1.stat["num_tranets"] : summary1.stat["expected planets detected"])
     np2 = (haskey(summary2.stat,"num_tranets") ? summary2.stat["num_tranets"] : summary2.stat["expected planets detected"])
-    ntarg1 = summary1.stat["num targets"]
-    ntarg2 = summary2.stat["num targets"]
+    ntarg1 = summary1.stat["num_targets"]
+    ntarg2 = summary2.stat["num_targets"]
     mintarg = min(ntarg1,ntarg2)
     alpha1 = 1+np1
     beta1 = 1+ntarg1
@@ -142,13 +142,13 @@ end
 function calc_distance_kl_num_n_tranet_systems(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   max_tranets_in_sys = get_int(sim_param,"max_tranets_in_sys")
   #= categorical distribution
-  f1sum = sum(summary1.stat["num n-tranet systems"]) # summary1.stat["num targets"]
-  f2sum = sum(summary2.stat["num n-tranet systems"]) # summary2.stat["num targets"]
+  f1sum = sum(summary1.stat["num_n-tranet_systems"]) # summary1.stat["num_targets"]
+  f2sum = sum(summary2.stat["num_n-tranet_systems"]) # summary2.stat["num_targets"]
   if !(f1sum>0 && f2sum>0) return 0.0  end
   d = zeros(max_tranets_in_sys)
   for n in 1:max_tranets_in_sys
-    f1 = summary1.stat["num n-tranet systems"][n]/f1sum
-    f2 = summary2.stat["num n-tranet systems"][n]/f2sum
+    f1 = summary1.stat["num_n-tranet_systems"][n]/f1sum
+    f2 = summary2.stat["num_n-tranet_systems"][n]/f2sum
     m = (f1+f2)/2
     if m>zero(m)
     if f1>zero(f1)
@@ -163,13 +163,13 @@ function calc_distance_kl_num_n_tranet_systems(summary1::CatalogSummaryStatistic
   end
   =#
   # Poisson distributions for each
-    ntarg1 = summary1.stat["num targets"]
-    ntarg2 = summary2.stat["num targets"]
+    ntarg1 = summary1.stat["num_targets"]
+    ntarg2 = summary2.stat["num_targets"]
     #mintarg = min(ntarg1,ntarg2)
   d = zeros(max_tranets_in_sys)
   for n in 1:max_tranets_in_sys
-    f1 = (1+summary1.stat["num n-tranet systems"][n])/(1+ntarg1) # *(1+mintarg)
-    f2 = (1+summary2.stat["num n-tranet systems"][n])/(1+ntarg2) # *(1+mintarg)
+    f1 = (1+summary1.stat["num_n-tranet_systems"][n])/(1+ntarg1) # *(1+mintarg)
+    f2 = (1+summary2.stat["num_n-tranet_systems"][n])/(1+ntarg2) # *(1+mintarg)
     d[n] = (f1-f2)*log(f1/f2)
   end
   return d
@@ -177,12 +177,12 @@ end
 
 function calc_distance_hellinger_num_n_tranet_systems(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   max_tranets_in_sys = get_int(sim_param,"max_tranets_in_sys")
-  f1sum = sum(summary1.stat["num n-tranet systems"]) # summary1.stat["num targets"]
-  f2sum = sum(summary2.stat["num n-tranet systems"]) # summary2.stat["num targets"]
+  f1sum = sum(summary1.stat["num_n-tranet_systems"]) # summary1.stat["num_targets"]
+  f2sum = sum(summary2.stat["num_n-tranet_systems"]) # summary2.stat["num_targets"]
   d = 1
   for n in 1:max_tranets_in_sys
-    f1 = summary1.stat["num n-tranet systems"][n]/f1sum
-    f2 = summary2.stat["num n-tranet systems"][n]/f2sum
+    f1 = summary1.stat["num_n-tranet_systems"][n]/f1sum
+    f2 = summary2.stat["num_n-tranet_systems"][n]/f2sum
     d -= sqrt(f1*f2)
   end
   #d = sqrt(d)
@@ -190,24 +190,24 @@ function calc_distance_hellinger_num_n_tranet_systems(summary1::CatalogSummarySt
 end
 
 function calc_distance_kl_period(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
-  #println("# P list 1: n=",length(summary1.stat["P list"])," min=",minimum(summary1.stat["P list"]), " max=",maximum(summary1.stat["P list"]))
-  #println("# P list 2: n=",length(summary2.stat["P list"])," min=",minimum(summary2.stat["P list"]), " max=",maximum(summary2.stat["P list"]))
-  samp1 = log.(summary1.stat["P list"] )
-  samp2 = log.(summary2.stat["P list"] )
+  #println("# periods 1: n=",length(summary1.stat["periods"])," min=",minimum(summary1.stat["periods"]), " max=",maximum(summary1.stat["periods"]))
+  #println("# periods 2: n=",length(summary2.stat["periods"])," min=",minimum(summary2.stat["periods"]), " max=",maximum(summary2.stat["periods"]))
+  samp1 = log.(summary1.stat["periods"] )
+  samp2 = log.(summary2.stat["periods"] )
   calc_kl_distance_ab(samp1,samp2,log(0.5),log(320.) )
 end
 
 function calc_distance_kl_depth(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
-  samp1 = log.(summary1.stat["depth list"] )
-  samp2 = log.(summary2.stat["depth list"] )
+  samp1 = log.(summary1.stat["depths"] )
+  samp2 = log.(summary2.stat["depths"] )
   calc_kl_distance_ab(samp1,samp2,log(0.000025),log(0.025) )
 end
 
 function calc_distance_kl_period_ratios(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   min_ratios_to_compute_distances = 3
   distance_when_not_enough_ratios = 10.0
-  samp1 = summary1.stat["period_ratio_list"]
-  samp2 = summary2.stat["period_ratio_list"]
+  samp1 = summary1.stat["period_ratios"]
+  samp2 = summary2.stat["period_ratios"]
   if length(samp1)<min_ratios_to_compute_distances || length(samp2)<min_ratios_to_compute_distances
      return distance_when_not_enough_ratios
   end
@@ -217,8 +217,8 @@ end
 function calc_distance_kl_duration_ratios(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, sim_param::SimParam ; verbose::Bool = false)
   min_ratios_to_compute_distances = 3
   distance_when_not_enough_ratios = 10.0
-  samp1 = log.( summary1.stat["duration_ratio_list"] )
-  samp2 = log.( summary2.stat["duration_ratio_list"] )
+  samp1 = log.( summary1.stat["duration_ratios"] )
+  samp2 = log.( summary2.stat["duration_ratios"] )
   if length(samp1)<min_ratios_to_compute_distances || length(samp2)<min_ratios_to_compute_distances
      return distance_when_not_enough_ratios
   end
@@ -249,8 +249,8 @@ Compute and return the distances between two planet catalogs as a dictionary.
 
 # Arguments:
 - `sim_param::SimParam`: a SimParam object containing various simulation parameters.
-- `ss1::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of a catalog.
-- `ss2::ExoplanetsSysSim.CatalogSummaryStatistics`: an object containing the summary statistics of another catalog.
+- `ss1::CatalogSummaryStatistics`: an object containing the summary statistics of a catalog.
+- `ss2::CatalogSummaryStatistics`: an object containing the summary statistics of another catalog.
 - `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
 
 # Returns:
@@ -259,13 +259,13 @@ Compute and return the distances between two planet catalogs as a dictionary.
 
 NOTE: individual distance terms are set to `Inf` if they cannot be computed (i.e. if not enough planets)!
 """
-function calc_all_distances_dict(sim_param::SimParam, ss1::ExoplanetsSysSim.CatalogSummaryStatistics, ss2::ExoplanetsSysSim.CatalogSummaryStatistics; AD_mod::Bool=true)
+function calc_all_distances_dict(sim_param::SimParam, ss1::CatalogSummaryStatistics, ss2::CatalogSummaryStatistics; AD_mod::Bool=true)
 
     max_incl_sys = get_real(sim_param, "max_incl_sys")
     cos_factor = cos(max_incl_sys*pi/180)
 
-    Nmult1 = ss1.stat["num n-tranet systems"]
-    Nmult2 = ss2.stat["num n-tranet systems"]
+    Nmult1 = ss1.stat["num_n-tranet_systems"]
+    Nmult2 = ss2.stat["num_n-tranet_systems"]
     M_obs1 = Int64[] # array to be filled with the number of transiting planets in each simulated system for ss1
     M_obs2 = Int64[] # array to be filled with the number of transiting planets in each simulated system for ss2
     max_k1, max_k2 = length(Nmult1), length(Nmult2)
@@ -285,14 +285,14 @@ function calc_all_distances_dict(sim_param::SimParam, ss1::ExoplanetsSysSim.Cata
     dists = Dict{String,Float64}()
 
     # Compute distances for rates of planets:
-    dists["delta_f"] = abs(ss1.stat["num_tranets"]/(ss1.stat["num targets"]/cos_factor) - ss2.stat["num_tranets"]/(ss2.stat["num targets"]))
+    dists["delta_f"] = abs(ss1.stat["num_tranets"]/(ss1.stat["num_targets"]/cos_factor) - ss2.stat["num_tranets"]/(ss2.stat["num_targets"]))
     dists["mult_KS"] = ExoplanetsSysSim.ksstats_ints(M_obs1, M_obs2)[5]
     dists["mult_CRPD"] = ExoplanetsSysSim.CRPDstats([Nmult1[1:4]; sum(Nmult1[5:end])], [Nmult2[1:4]; sum(Nmult2[5:end])]) # NOTE: binning 5+ planet systems together
     dists["mult_CRPD_r"] = ExoplanetsSysSim.CRPDstats([Nmult2[1:4]; sum(Nmult2[5:end])], [Nmult1[1:4]; sum(Nmult1[5:end])]) # NOTE: binning 5+ planet systems together
 
     # Compute KS and AD distances for the marginals:
     ADdist = AD_mod ? ExoplanetsSysSim.ADstats_mod : ExoplanetsSysSim.ADstats
-    obs = ["periods", "pratios", "durations", "xis", "xis_nonmmr", "xis_mmr", "depths", "depths_above", "depths_below", "rratios", "rratios_above", "rratios_below", "rratios_across"]
+    obs = ["periods", "period_ratios", "durations", "duration_ratios", "duration_ratios_nonmmr", "duration_ratios_mmr", "depths", "depths_above", "depths_below", "radius_ratios", "radius_ratios_above", "radius_ratios_below", "radius_ratios_across"]
     for (i,key) in enumerate(obs)
         # NOTE: if the KS or AD distance cannot be computed (i.e. not enough observed planets), assign Inf
         dists[key*"_KS"] = min(length(ss1.stat[key]), length(ss2.stat[key]))>0 ? ExoplanetsSysSim.ksstats(ss1.stat[key], ss2.stat[key])[5] : Inf
