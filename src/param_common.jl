@@ -29,7 +29,10 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     # For generating planetary system properties:
     add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered) # For Non-clustered model: "generate_planetary_system_non_clustered"
 
-    add_param_active(sim_param,"f_stars_with_planets_attempted", 1.)
+    add_param_active(sim_param,"f_stars_with_planets_attempted_color_slope", 0.)
+    add_param_active(sim_param,"f_stars_with_planets_attempted_at_med_color", 0.5)
+    add_param_fixed(sim_param,"med_color", 0.95)
+    #add_param_active(sim_param,"f_stars_with_planets_attempted", 1.)
     add_param_fixed(sim_param,"generate_num_clusters", generate_num_clusters_ZTP)
     add_param_fixed(sim_param,"generate_num_planets_in_cluster", generate_num_planets_in_cluster_ZTP)
     add_param_active(sim_param,"log_rate_clusters", log(1.6))
