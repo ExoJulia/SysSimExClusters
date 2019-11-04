@@ -4,6 +4,58 @@ using ParallelDataTransfer # just to compile a function
 
 
 """
+    draw_random_active_params(active_param_keys, active_params_box, sim_param; PT_all=ExoplanetsSysSim.ParamsTriangle[])
+
+Draw a set of active parameter values randomly (uniformly in the given box). If there are any triangle-transformed pairs of parameters (`PT_all` is not empty), those parameters are drawn uniformly in their respective triangles. NOTE: also rewrites the active parameter values in `sim_param` with the drawn values!
+
+# Arguments:
+- `active_param_keys::Vector{String}`: list of active parameter keys.
+- `active_params_box::Vector{Tuple{Float64,Float64}}`: list of tuples specifying the bounds for each active parameter.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}=ExoplanetsSysSim.ParamsTriangle[]`: a vector of objects containing the pairs of parameters that are triangle-transformed (default is an empty list indicating no transformed parameters).
+NOTE 1: the parameters in `active_param_keys` should be sorted (in alphabetical order), such that the function `make_vector_of_active_param_keys(sim_param)` returns the same list, and the tuples in `active_params_box` should correspond to these parameters.
+NOTE 2: the bounds in `active_params_box` for transformed parameters should be simply (0,1).
+
+# Returns:
+- `active_param_draw::Vector{Float64}`: a list of randomly drawn active parameter values.
+- `active_param_draw_r::Vector{Float64}`: a list of randomly drawn active parameter values, with transformed parameters having their transformed values (i.e. `r1`, `r2` pairs with values in (0,1)).
+Note: also writes the drawn active parameter values to `sim_param`!
+"""
+function draw_random_active_params(active_param_keys::Vector{String}, active_params_box::Vector{Tuple{Float64,Float64}}, sim_param::SimParam; PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}=ExoplanetsSysSim.ParamsTriangle[])
+    @assert length(active_param_keys) == length(active_params_box)
+
+    for (i,param_key) in enumerate(active_param_keys)
+        active_param_draw = active_params_box[i][1] .+ (active_params_box[i][2] - active_params_box[i][1])*rand(1)
+        add_param_active(sim_param, param_key, active_param_draw[1])
+    end
+
+    # To draw any transformed parameters:
+    if length(PT_all) > 0
+        params_r = zeros(length(active_param_keys))
+        for (i,pt) in enumerate(PT_all)
+            r1r2 = (rand(), rand())
+            params_r[collect(pt.id_xy)] .= r1r2
+            transformed_params = map_square_to_triangle(r1r2, pt)
+            add_param_active(sim_param, active_param_keys[pt.id_xy[1]], transformed_params[1])
+            add_param_active(sim_param, active_param_keys[pt.id_xy[2]], transformed_params[2])
+        end
+
+        active_param_draw = make_vector_of_sim_param(sim_param)
+        active_param_draw_r = deepcopy(active_param_draw)
+        active_param_draw_r[params_r .!= 0] .= params_r[params_r .!= 0]
+    else # there are no transformed params
+        active_param_draw = make_vector_of_sim_param(sim_param)
+        active_param_draw_r = Float64[]
+    end
+
+    return (active_param_draw, active_param_draw_r)
+end
+
+
+
+
+
+"""
     simulate_catalog_and_calc_all_distances_dict(active_param, sim_param; ss_fit, AD_mod=true)
 
 Simulate a catalog with the parameters in `active_param` and compute the distances compared to the catalog provided with `ss_fit`.
@@ -205,14 +257,13 @@ end
 
 
 """
-    target_function_transformed_params(active_param_transformed, transformed_indices, A, B, C, sim_param; ss_fit, dists_include, weights, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
+    target_function_transformed_params(active_param_transformed, PT_all, sim_param; ss_fit, dists_include, weights, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
 
 Same as `target_function`, but takes in a list of active parameters that have a pair of variables transformed via the triangle transformation. Evaluate `target_function` after transforming the transformed parameters back to physical model parameters.
 
 # Arguments:
 - `active_param_transformed::Vector{Float64}`: a vector of values for the transformed active model parameters.
-- `transformed_indices::Vector{Int64}`: a vector of indices for the two transformed parameters.
-- `A::Vector{Float64}`, `B::Vector{Float64}`, `C::Vector{Float64}`: vertices for the triangle defining the region of allowed values for the two transformed parameters (the labeling of A/B/C does not matter).
+- `PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}`: a vector of objects containing the pairs of parameters that are triangle-transformed.
 - `sim_param::SimParam`: a SimParam object containing various simulation parameters.
 - `ss_fit::CatalogSummaryStatistics`: an object containing the summary statistics of the catalog we are trying to fit to.
 - `dists_include::Vector{String}`: a vector of strings for the names of the distance terms to be included in the total distance.
@@ -225,13 +276,14 @@ Same as `target_function`, but takes in a list of active parameters that have a 
 # Returns:
 The total weighted distance (a Float64) if `all_dist=false` or the individual weighted distance terms (a Vector{Float64}) if `all_dist=true` of the simulated catalog compared to the input catalog.
 """
-function target_function_transformed_params(active_param_transformed::Vector{Float64}, transformed_indices::Vector{Int64}, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64}, sim_param::SimParam; ss_fit::CatalogSummaryStatistics, dists_include::Vector{String}, weights::Dict{String,Float64}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+function target_function_transformed_params(active_param_transformed::Vector{Float64}, PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}, sim_param::SimParam; ss_fit::CatalogSummaryStatistics, dists_include::Vector{String}, weights::Dict{String,Float64}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
 
-    r1, r2 = active_param_transformed[transformed_indices]
-    @assert 0. <= r1 <= 1.
-    @assert 0. <= r2 <= 1.
     active_param = deepcopy(active_param_transformed)
-    active_param[transformed_indices] = map_square_to_triangle(r1, r2, A, B, C)
+    for pt in PT_all
+        id_xy = collect(pt.id_xy)
+        r1r2 = Tuple(active_param_transformed[id_xy])
+        active_param[id_xy] .= map_square_to_triangle(r1r2, pt)
+    end
 
     return target_function(active_param, sim_param; ss_fit=ss_fit, dists_include=dists_include, weights=weights, AD_mod=AD_mod, all_dist=all_dist, save_dist=save_dist, f=f)
 end
@@ -239,14 +291,13 @@ end
 
 
 """
-    target_function_transformed_params_split_stars(active_param_transformed, transformed_indices, A, B, C, sim_param; cssc_fit, dists_include_all, weights_all, names_samples, dists_include_samples, weights_samples, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
+    target_function_transformed_params_split_stars(active_param_transformed, PT_all, sim_param; cssc_fit, dists_include_all, weights_all, names_samples, dists_include_samples, weights_samples, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
 
 Same as `target_function_split_stars`, but takes in a list of active parameters that have a pair of variables transformed via the triangle transformation. Evaluate `target_function_split_stars` after transforming the transformed parameters back to physical model parameters.
 
 # Arguments:
 - `active_param_transformed::Vector{Float64}`: a vector of values for the transformed active model parameters.
-- `transformed_indices::Vector{Int64}`: a vector of indices for the two transformed parameters.
-- `A::Vector{Float64}`, `B::Vector{Float64}`, `C::Vector{Float64}`: vertices for the triangle defining the region of allowed values for the two transformed parameters (the labeling of A/B/C does not matter).
+- `PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}`: a vector of objects containing the pairs of parameters that are triangle-transformed.
 - `sim_param::SimParam`: a SimParam object containing various simulation parameters.
 - `cssc_fit::CatalogSummaryStatisticsCollection`: object containing a number of CatalogSummaryStatistics objects for each sample to compare to.
 - `dists_include_all::Vector{String}`: vector of strings for the names of the distance terms of the combined sample to be included in the total distance.
@@ -262,13 +313,14 @@ Same as `target_function_split_stars`, but takes in a list of active parameters 
 # Returns:
 The total weighted distance (a Float64) if `all_dist=false` or the individual weighted distance terms (a Vector{Float64}) if `all_dist=true` of the simulated catalog compared to the input catalog.
 """
-function target_function_transformed_params_split_stars(active_param_transformed::Vector{Float64}, transformed_indices::Vector{Int64}, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64}, sim_param::SimParam; cssc_fit::CatalogSummaryStatisticsCollection, dists_include_all::Vector{String}, weights_all::Dict{String,Float64}, names_samples::Array{String,1}, dists_include_samples::Array{Vector{String},1}, weights_samples::Array{Dict{String,Float64},1}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+function target_function_transformed_params_split_stars(active_param_transformed::Vector{Float64}, PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}, sim_param::SimParam; cssc_fit::CatalogSummaryStatisticsCollection, dists_include_all::Vector{String}, weights_all::Dict{String,Float64}, names_samples::Array{String,1}, dists_include_samples::Array{Vector{String},1}, weights_samples::Array{Dict{String,Float64},1}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
 
-    r1, r2 = active_param_transformed[transformed_indices]
-    @assert 0. <= r1 <= 1.
-    @assert 0. <= r2 <= 1.
     active_param = deepcopy(active_param_transformed)
-    active_param[transformed_indices] = map_square_to_triangle(r1, r2, A, B, C)
+    for pt in PT_all
+        id_xy = collect(pt.id_xy)
+        r1r2 = Tuple(active_param_transformed[id_xy])
+        active_param[id_xy] .= map_square_to_triangle(r1r2, pt)
+    end
 
     return target_function_split_stars(active_param, sim_param; cssc_fit=cssc_fit, dists_include_all=dists_include_all, weights_all=weights_all, names_samples=names_samples, dists_include_samples=dists_include_samples, weights_samples=weights_samples, AD_mod=AD_mod, all_dist=all_dist, save_dist=save_dist, f=f)
 end
