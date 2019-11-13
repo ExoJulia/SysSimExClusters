@@ -487,7 +487,7 @@ end
 
 
 """
-    compute_weights_target_fitness_std_perfect_model_split_stars(num_evals, sim_param; cssc_ref, names_samples, ss_refs, AD_mod=true, save_dist=true, f=nothing)
+    compute_weights_target_fitness_std_perfect_model_split_stars(num_evals, sim_param; cssc_ref, names_samples, AD_mod=true, save_dist=true, f=nothing)
 
 Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, by simulating the same model many times.
 
@@ -583,6 +583,140 @@ function compute_weights_target_fitness_std_perfect_model_split_stars(num_evals:
         println(f, "#")
         println(f, "# Total weighted distance (all terms): ", totdist_w_mean, " +/- ", totdist_w_std)
         println(f, "# elapsed time: ", t_elapsed, " seconds")
+        println(f, "#")
+    end
+
+    return (active_param_true, weights_dicts, totdist_w_mean, totdist_w_std)
+end
+
+
+
+"""
+    compute_weights_target_fitness_std_perfect_model_all_pairs_split_stars(num_evals, sim_param; star_id_samples, names_samples, AD_mod=true, save_dist=true, f=nothing)
+
+Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, by simulating the same model many times.
+
+# Arguments:
+- `num_evals::Int64`: number of times to simulate the same model to compare to the reference model.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `star_id_samples::Vector{Vector{Int64}}`: list of the vectors of stellar id's for the split stellar catalogs.
+- `names_samples::Vector{String}`: names of the split stellar catalog files.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+
+# Returns:
+- `active_param_true::Vector{Float64}`: a vector of the active model parameters assumed for the 'perfect' model.
+- `weights_dicts::Dict{String,Dict{String,Float64}}`: a dictionary of dictionaries containing weights for the individual distance terms for each sample.
+- `totdist_w_mean::Float64`: the mean of the total weighted distance.
+- `totdist_w_std::Float64`: the standard deviation of the total weighted distance.
+"""
+function compute_weights_target_fitness_std_perfect_model_all_pairs_split_stars(num_evals::Int64, sim_param::SimParam; star_id_samples::Vector{Vector{Int64}}, names_samples::Vector{String}, AD_mod::Bool=true, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+
+    names_list = ["all"; names_samples]
+
+    # First, generate a number of simulated catalogs from the same model and record their summary statistics:
+    cssc_evals = Vector{CatalogSummaryStatisticsCollection}(undef, num_evals)
+    t_elapsed_evals = @elapsed begin
+        active_param_true = make_vector_of_sim_param(sim_param)
+        println("# True values: ", active_param_true)
+
+        for i in 1:num_evals
+            # Generate a simulated catalog:
+            cat_phys = generate_kepler_physical_catalog(sim_param)
+            cat_phys_cut = ExoplanetsSysSim.generate_obs_targets(cat_phys, sim_param)
+            cat_obs = observe_kepler_targets_single_obs(cat_phys_cut, sim_param)
+
+            # Compute the summary statistics:
+            cssc_evals[i] = calc_summary_stats_collection_model(cat_obs, names_samples, star_id_samples, sim_param)
+
+            println(i)
+        end
+    end
+
+    # Then, compute the distances between every pair of the simulated catalogs:
+    t_elapsed_dists = @elapsed begin
+        if save_dist
+            println(f, "# AD_mod: ", AD_mod)
+            println(f, "# Format: Counts: [observed multiplicities 1][total planets 1, total planet pairs 1][observed multiplicities 2][total planets 2, total planet pairs 2]")
+            println(f, "# Format: d_all_keys: [names of distance terms]")
+            println(f, "# Format: d_all_vals: [distance terms]")
+        end
+
+        # Compute the distances once to get the total number of distance terms and their keys:
+        dists, counts = calc_all_distances_dict(sim_param, cssc_evals[1].css_samples["all"], cssc_evals[2].css_samples["all"]; AD_mod=AD_mod)
+        dists_keys_all = collect(keys(dists))
+        n_dists = length(dists_keys_all) # total number of individual distance terms
+
+        # Compute distances for every combination of summary statistics:
+        dists_all_vals_evals = Dict([(name, zeros(binomial(num_evals,2),n_dists)) for name in names_list])
+        ij_counter = 0
+        for i in 1:num_evals
+            for j in (i+1):num_evals
+                ij_counter += 1
+
+                println("# i,j: ", i, ",", j)
+                if save_dist
+                    println(f, "# i,j: ", i, ",", j)
+                end
+
+                # Compute and write the distances:
+                for (n,name) in enumerate(names_list)
+
+                    # Compute the individual and total weighted distances:
+                    dists, counts = calc_all_distances_dict(sim_param, cssc_evals[i].css_samples[name], cssc_evals[j].css_samples[name]; AD_mod=AD_mod)
+                    dists_all_keys, dists_all_vals = keys(dists), values(dists)
+
+                    dists_all_vals_evals[name][ij_counter,:] .= dists_all_vals
+
+                    # Print and/or write the distances to file:
+                    println("[$name] Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]], counts["Nmult2"], [counts["n_pl2"], counts["n_pairs2"]])
+                    println("[$name] d_all_keys: ", dists_all_keys)
+                    println("[$name] d_all_vals: ", dists_all_vals)
+                    if save_dist
+                        println(f, "[$name] Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]], counts["Nmult2"], [counts["n_pl2"], counts["n_pairs2"]])
+                        println(f, "[$name] d_all_keys: ", dists_all_keys)
+                        println(f, "[$name] d_all_vals: ", dists_all_vals)
+                    end
+                end
+
+                println("#")
+                if save_dist
+                    println(f, "#")
+                end
+            end
+        end
+
+        @assert ij_counter == binomial(num_evals,2)
+        println("# Combinations: ", ij_counter)
+            if save_dist
+            println(f, "# Combinations: ", ij_counter)
+        end
+    end
+
+    weights_dicts = Dict([(name, Dict{String,Float64}()) for name in names_list])
+    totdist_w_mean_list = Float64[]
+    totdist_w_std_list = Float64[]
+    for name in names_list
+        weights, totdist_w_mean, totdist_w_std = compute_weights_target_fitness_std_from_array(dists_all_vals_evals[name], dists_keys_all; dists_include=dists_keys_all, save_dist=save_dist, f=f)
+        weights_dicts[name] = weights
+        push!(totdist_w_mean_list, totdist_w_mean)
+        push!(totdist_w_std_list, totdist_w_std)
+    end
+
+    totdist_w_mean = sum(totdist_w_mean_list)
+    totdist_w_std = sqrt(sum(totdist_w_std_list.^2))
+
+    println("#")
+    println("# Total weighted distance (all terms): ", totdist_w_mean, " +/- ", totdist_w_std)
+    println("# elapsed time (simulating catalogs): ", t_elapsed_evals, " seconds")
+    println("# elapsed time (computing distances): ", t_elapsed_dists, " seconds")
+    println("#")
+    if save_dist
+        println(f, "#")
+        println(f, "# Total weighted distance (all terms): ", totdist_w_mean, " +/- ", totdist_w_std)
+        println(f, "# elapsed time (simulating catalogs): ", t_elapsed_evals, " seconds")
+        println(f, "# elapsed time (computing distances): ", t_elapsed_dists, " seconds")
         println(f, "#")
     end
 

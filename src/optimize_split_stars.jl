@@ -52,7 +52,7 @@ add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
 add_param_fixed(sim_param,"max_incl_sys", max_incl_sys)
 
 # To load and compute the weights, target distance, and target distance std from a precomputed file:
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file_split_samples("Clustered_P_R_split_stars_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, sim_param; names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], dists_include_all=dists_include_all, f=f)
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file_split_samples("Clustered_P_R_split_stars_weights_ADmod_$(AD_mod)_targs79935_evals100_all_pairs.txt", 4950, sim_param; names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], dists_include_all=dists_include_all, f=f)
 weights_split = [weights["bluer"], weights["redder"]]
 
 
@@ -61,7 +61,7 @@ weights_split = [weights["bluer"], weights["redder"]]
 
 ##### To draw the initial values of the active parameters randomly within a search range:
 
-ParamsTriangles_all = [ExoplanetsSysSim.ParamsTriangle((9,10), (0.,0.), (30.,30.), (30.,0.))] #[]
+ParamsTriangles_all = [ExoplanetsSysSim.ParamsTriangle((9,10), (0.,0.), (90.,90.), (90.,0.))] #[]
 active_param_keys = ["f_high_incl", "f_stars_with_planets_attempted", "log_rate_clusters", "log_rate_planets_per_cluster", "power_law_P", "power_law_r1", "power_law_r2", "sigma_hk", "sigma_incl", "sigma_incl_near_mmr", "sigma_log_radius_in_cluster", "sigma_logperiod_per_pl_in_cluster"]
 active_params_box = [(0., 1.), (0., 1.), (log(0.5), log(5.)), (log(0.5), log(5.)), (-2., 2.), (-4., 2.), (-6., 0.), (0., 0.1), (0., 1.), (0., 1.), (0., 0.5), (0., 0.3)] #search ranges for all of the active parameters
 
