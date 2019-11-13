@@ -108,7 +108,7 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
     duration_ratios_mmr = Float64[] #list to be filled with the period-normalized transit duration ratios of adjacent planet pairs near a resonance
     depth_ratios = Float64[] #list to be filled with the transit depth ratios of adjacent planet pairs
     periods = collect(skipmissing(planets_cleaned[:koi_period])) #array of the periods (days)
-    durations = collect(skipmissing(planets_cleaned[:koi_duration])) #array of the transit durations (hrs)
+    durations = collect(skipmissing(planets_cleaned[:koi_duration]./24)) #array of the transit durations (days)
     depths = collect(skipmissing(planets_cleaned[:koi_depth]./(1e6))) #array of the transit depths (fraction)
 
     depths_above = Float64[] #list to be filled with the transit depths of planets above the photoevaporation boundary in Carrera et al 2018
