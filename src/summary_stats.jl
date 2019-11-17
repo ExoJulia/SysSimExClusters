@@ -396,7 +396,7 @@ end
 """
     calc_summary_stats_cuml_period_depth_duration!(css, cat_obs, sim_param)
 
-Compute the lists of periods, transit depths, and transit durations in the observed catalog and add them to the summary statistics (`css.stat`).
+Compute the lists of periods, transit depths, transit durations, and normalized transit durations in the observed catalog and add them to the summary statistics (`css.stat`).
 
 # Arguments:
 - `css::CatalogSummaryStatistics`: object containing the summary statistics.
@@ -407,9 +407,10 @@ Compute the lists of periods, transit depths, and transit durations in the obser
 - `period_list::Vector{Float64}`: list of observed periods.
 - `depth_list::Vector{Float64}`: list of transit depths.
 - `duration_list::Vector{Float64}`: list of transit durations.
+- `duration_norm_circ_list::Vector{Float64}`: list of transit durations normalized by the circular, central durations.
 - `depth_above_list::Vector{Float64}`: list of transit depths above the photo-evaporation boundary defined by Carrera et al. (2018).
 - `depth_below_list::Vector{Float64}`: list of transit depths below the photo-evaporation boundary.
-Also writes the period, depth, and duration lists to `css.stat`, and writes the depth lists above and below the photo-evaporation boundary to `css.cache`.
+Also writes the period, depth, duration, and normalized duration lists to `css.stat`, and writes the depth lists above and below the photo-evaporation boundary to `css.cache`.
 """
 function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, sim_param::SimParam)
     # Allocate arrays to store values for each tranet:
@@ -417,6 +418,7 @@ function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStati
     period_list = zeros(num_tranets)
     depth_list = zeros(num_tranets)
     duration_list = zeros(num_tranets)
+    duration_norm_circ_list = zeros(num_tranets)
     #weight_list = ones(num_tranets)
 
     depth_above_list = Float64[] # list to be filled with the transit depths of planets above the photoevaporation boundary in Carrera et al 2018
@@ -433,6 +435,7 @@ function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStati
             period_list[i] = targ.obs[j].period
             depth_list[i] = targ.obs[j].depth
             duration_list[i] = targ.obs[j].duration
+            duration_norm_circ_list[i] = targ.obs[j].duration/calc_transit_duration_central_circ_obs(targ, j)
             #weight_list[i] = 1.0
 
             radius_earths, period = (sqrt(targ.obs[j].depth)*targ.star.radius) / ExoplanetsSysSim.earth_radius, targ.obs[j].period
@@ -446,16 +449,18 @@ function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStati
     resize!(period_list, i)
     resize!(depth_list, i)
     resize!(duration_list, i)
+    resize!(duration_norm_circ_list, i)
     css.stat["periods"] = period_list
     css.stat["depths"] = depth_list
     css.stat["durations"] = duration_list
+    css.stat["durations_norm_circ"] = duration_norm_circ_list
     #css.cache["weight list"] = weight_list
 
     css.cache["depths_above"] = depth_above_list
     css.cache["depths_below"] = depth_below_list
 
     #println("# P = ",period_list)
-    return (period_list, depth_list, duration_list, depth_above_list, depth_below_list)
+    return (period_list, depth_list, duration_list, duration_norm_circ_list, depth_above_list, depth_below_list)
 end
 
 
@@ -476,7 +481,7 @@ Compute the transit depths lists in the observed catalog, split by planets above
 Also writes these to `css.stat`.
 """
 function calc_summary_stats_depths_photoevap_boundary_Carrera2018!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, sim_param::SimParam)
-    depth_above_list, depth_below_list = calc_summary_stats_cuml_period_depth_duration!(css, cat_obs, sim_param)[4:5]
+    depth_above_list, depth_below_list = calc_summary_stats_cuml_period_depth_duration!(css, cat_obs, sim_param)[5:6]
     css.stat["depths_above"] = depth_above_list
     css.stat["depths_below"] = depth_below_list
     return (depth_above_list, depth_below_list)
