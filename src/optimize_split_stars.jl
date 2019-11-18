@@ -18,8 +18,8 @@ AD_mod = true
 num_targs = 79935
 max_incl_sys = 0.
 max_evals = 5000
-dists_include_split = ["delta_f", "mult_CRPD_r", "period_ratios_KS", "durations_KS", "depths_KS", "radius_ratios_KS"]
-dists_include_all = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
+dists_include_split = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
+dists_include_all = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 Pop_per_param = 4
 
 file_name = model_name*optimization_number*"_targs$(num_targs)_evals$(max_evals).txt"
@@ -52,7 +52,7 @@ add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
 add_param_fixed(sim_param,"max_incl_sys", max_incl_sys)
 
 # To load and compute the weights, target distance, and target distance std from a precomputed file:
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file_split_samples("Clustered_P_R_split_stars_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, sim_param; names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], dists_include_all=dists_include_all, f=f)
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file_split_samples("Clustered_P_R_split_stars_weights_ADmod_$(AD_mod)_targs79935_evals100_all_pairs.txt", 4950, sim_param; names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], dists_include_all=dists_include_all, f=f)
 weights_split = [weights["bluer"], weights["redder"]]
 
 
@@ -61,28 +61,15 @@ weights_split = [weights["bluer"], weights["redder"]]
 
 ##### To draw the initial values of the active parameters randomly within a search range:
 
-transformed_indices = [9,10]
+ParamsTriangles_all = [ExoplanetsSysSim.ParamsTriangle((9,10), (0.,0.), (90.,90.), (90.,0.))] #[]
 active_param_keys = ["f_high_incl", "f_stars_with_planets_attempted", "log_rate_clusters", "log_rate_planets_per_cluster", "power_law_P", "power_law_r1", "power_law_r2", "sigma_hk", "sigma_incl", "sigma_incl_near_mmr", "sigma_log_radius_in_cluster", "sigma_logperiod_per_pl_in_cluster"]
 active_params_box = [(0., 1.), (0., 1.), (log(0.5), log(5.)), (log(0.5), log(5.)), (-2., 2.), (-4., 2.), (-6., 0.), (0., 0.1), (0., 1.), (0., 1.), (0., 0.5), (0., 0.3)] #search ranges for all of the active parameters
-transformed_triangle = [[0., 0.], [30., 30.], [30., 0.]] # vertices (x,y) of the triangle for the transformed params
-
-# To randomly draw (uniformly) a value for each active model parameter within its search range:
 
 Random.seed!() # to have a random set of initial parameters and optimization run
 
-for (i,param_key) in enumerate(active_param_keys)
-    if ~in(i,transformed_indices)
-        active_param_draw = active_params_box[i][1] .+ (active_params_box[i][2] - active_params_box[i][1])*rand(1)
-        add_param_active(sim_param,param_key,active_param_draw[1])
-    end
-end
-r1_r2 = rand(2)
-transformed_params = map_square_to_triangle(r1_r2[1], r1_r2[2], transformed_triangle[1], transformed_triangle[2], transformed_triangle[3])
-add_param_active(sim_param, active_param_keys[transformed_indices[1]], transformed_params[1])
-add_param_active(sim_param, active_param_keys[transformed_indices[2]], transformed_params[2])
-active_param_start = make_vector_of_sim_param(sim_param)
-active_param_transformed_start = deepcopy(active_param_start)
-active_param_transformed_start[transformed_indices] = r1_r2
+active_param_start, active_param_transformed_start = draw_random_active_params(active_param_keys, active_params_box, sim_param; PT_all=ParamsTriangles_all)
+
+
 
 PopSize = length(active_param_true)*Pop_per_param
 
@@ -90,9 +77,10 @@ println("# Active parameters: ", make_vector_of_active_param_keys(sim_param))
 println(f, "# Active parameters: ", make_vector_of_active_param_keys(sim_param))
 println(f, "# Starting active parameter values: ", active_param_start)
 println(f, "# Optimization active parameters search bounds: ", active_params_box)
-println(f, "# Transformed active parameters: ", make_vector_of_active_param_keys(sim_param)[transformed_indices])
-if length(transformed_indices) > 0
-    println(f, "# Transformed active parameters search triangle vertices: ", transformed_triangle)
+if length(ParamsTriangles_all) > 0
+    for pt in ParamsTriangles_all
+        println(f, "# Transformed active parameters: ", make_vector_of_active_param_keys(sim_param)[collect(pt.id_xy)], "; Triangle bounds: $(pt.A), $(pt.B), $(pt.C)")
+    end
 end
 println(f, "# Method: adaptive_de_rand_1_bin_radiuslimited")
 println(f, "# PopulationSize: ", PopSize)
@@ -108,7 +96,7 @@ println(f, "# Format: [sample] d_used_vals_w: [weighted distance terms][sum of w
 println(f, "#")
 
 target_function_split_stars(active_param_start, sim_param; cssc_fit=cssck, dists_include_all=dists_include_all, weights_all=weights["all"], names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], weights_samples=weights_split, AD_mod=AD_mod, f=f)
-target_function_transformed_params_split_stars(active_param_transformed_start, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], sim_param; cssc_fit=cssck, dists_include_all=dists_include_all, weights_all=weights["all"], names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], weights_samples=weights_split, AD_mod=AD_mod, f=f)
+target_function_transformed_params_split_stars(active_param_transformed_start, ParamsTriangles_all, sim_param; cssc_fit=cssck, dists_include_all=dists_include_all, weights_all=weights["all"], names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], weights_samples=weights_split, AD_mod=AD_mod, f=f)
 
 
 
@@ -123,7 +111,7 @@ using BlackBoxOptim              # see https://github.com/robertfeldt/BlackBoxOp
 t_elapsed = @elapsed begin
     #opt_result = bboptimize(active_params -> target_function_split_stars(active_params, sim_param; cssc_fit=cssck, dists_include_all=dists_include_all, weights_all=weights["all"], names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], weights_samples=weights_split, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
 
-    opt_result = bboptimize(active_params -> target_function_transformed_params_split_stars(active_params, transformed_indices, transformed_triangle[1], transformed_triangle[2], transformed_triangle[3], sim_param; cssc_fit=cssck, dists_include_all=dists_include_all, weights_all=weights["all"], names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], weights_samples=weights_split, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
+    opt_result = bboptimize(active_params -> target_function_transformed_params_split_stars(active_params, ParamsTriangles_all, sim_param; cssc_fit=cssck, dists_include_all=dists_include_all, weights_all=weights["all"], names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], weights_samples=weights_split, AD_mod=AD_mod, f=f); SearchRange = active_params_box, NumDimensions = length(active_param_true), Method = :adaptive_de_rand_1_bin_radiuslimited, PopulationSize = PopSize, MaxFuncEvals = max_evals, TargetFitness = target_fitness, FitnessTolerance = target_fitness_std, TraceMode = :verbose)
 end
 
 println(f, "# best_candidate: ", best_candidate(opt_result))

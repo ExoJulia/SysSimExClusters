@@ -76,9 +76,9 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
         end
         P[i] = draw_period_lognormal_allowed_regions_mutualHill(P[1:i-1], mass[1:i-1], mass[i], star.mass, sim_param; μ=log_mean_P, σ=n*sigma_logperiod_per_pl_in_cluster, x_min=1/sqrt(max_period_ratio), x_max=sqrt(max_period_ratio), ecc=ecc[1:i-1], insert_pl_ecc=ecc[i])
     end
-    #if !test_stability(P, mass, star.mass, sim_param; ecc=ecc) # This should never happen if our unscaled period draws are correct
-        #println("WHAT: ", P)
-    #end
+    if !test_stability(P, mass, star.mass, sim_param; ecc=ecc) # This should never happen if our unscaled period draws are correct
+        println("WHAT: ", P)
+    end
     =#
 
     # Old rejection sampling:
@@ -132,13 +132,29 @@ function generate_num_planets_in_cluster_ZTP(s::Star, sim_param::SimParam)
 end
 
 function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)  # TODO: Make this function work and test before using for science
+
+    # To include a dependence on stellar color for the fraction of stars with planets:
+    global stellar_catalog
+    star_color = stellar_catalog[:bp_rp][star.id]
+    f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
+    f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
+    med_color = get_real(sim_param, "med_color")
+    @assert 0<=f_stars_with_planets_attempted_at_med_color<=1
+
+    f_stars_with_planets_attempted = f_stars_with_planets_attempted_color_slope*(star_color - med_color) + f_stars_with_planets_attempted_at_med_color
+    f_stars_with_planets_attempted = min(f_stars_with_planets_attempted, 1.)
+    f_stars_with_planets_attempted = max(f_stars_with_planets_attempted, 0.)
+    @assert 0<=f_stars_with_planets_attempted<=1
+
     # Load functions to use for drawing parameters:
+    #=
     if haskey(sim_param, "f_stars_with_planets_attempted")
         f_stars_with_planets_attempted = get_real(sim_param, "f_stars_with_planets_attempted")
         @assert 0<=f_stars_with_planets_attempted<=1
     else
         f_stars_with_planets_attempted = 1.
     end
+    =#
     generate_num_clusters = get_function(sim_param, "generate_num_clusters")
     generate_num_planets_in_cluster = get_function(sim_param, "generate_num_planets_in_cluster")
     power_law_P = get_real(sim_param, "power_law_P")
@@ -201,10 +217,11 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
                 #println("Cannot fit cluster into system; returning clusters that did fit.")
                 break
             end
-            #if !test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param; ecc=view(ecclist,1:pl_stop)) # This should never happen if our period scale draws are correct
-                #println("WHAT 2")
+            if !test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param; ecc=view(ecclist,1:pl_stop)) # This should never happen if our period scale draws are correct
+                println("WHAT 2")
                 #Plist[pl_start:pl_stop] .= NaN
-            #end
+                break
+            end
             =#
 
             # Old rejection sampling:

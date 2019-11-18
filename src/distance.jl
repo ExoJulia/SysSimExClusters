@@ -286,13 +286,13 @@ function calc_all_distances_dict(sim_param::SimParam, ss1::CatalogSummaryStatist
 
     # Compute distances for rates of planets:
     dists["delta_f"] = abs(ss1.stat["num_tranets"]/(ss1.stat["num_targets"]/cos_factor) - ss2.stat["num_tranets"]/(ss2.stat["num_targets"]))
-    dists["mult_KS"] = ExoplanetsSysSim.ksstats_ints(M_obs1, M_obs2)[5]
+    dists["mult_KS"] = min(length(M_obs1), length(M_obs2))>0 ? ExoplanetsSysSim.ksstats_ints(M_obs1, M_obs2)[5] : Inf
     dists["mult_CRPD"] = ExoplanetsSysSim.CRPDstats([Nmult1[1:4]; sum(Nmult1[5:end])], [Nmult2[1:4]; sum(Nmult2[5:end])]) # NOTE: binning 5+ planet systems together
     dists["mult_CRPD_r"] = ExoplanetsSysSim.CRPDstats([Nmult2[1:4]; sum(Nmult2[5:end])], [Nmult1[1:4]; sum(Nmult1[5:end])]) # NOTE: binning 5+ planet systems together
 
     # Compute KS and AD distances for the marginals:
     ADdist = AD_mod ? ExoplanetsSysSim.ADstats_mod : ExoplanetsSysSim.ADstats
-    obs = ["periods", "period_ratios", "durations", "duration_ratios", "duration_ratios_nonmmr", "duration_ratios_mmr", "depths", "depths_above", "depths_below", "radius_ratios", "radius_ratios_above", "radius_ratios_below", "radius_ratios_across"]
+    obs = ["periods", "period_ratios", "durations", "durations_norm_circ", "duration_ratios", "duration_ratios_nonmmr", "duration_ratios_mmr", "depths", "depths_above", "depths_below", "radius_ratios", "radius_ratios_above", "radius_ratios_below", "radius_ratios_across"]
     for (i,key) in enumerate(obs)
         # NOTE: if the KS or AD distance cannot be computed (i.e. not enough observed planets), assign Inf
         dists[key*"_KS"] = min(length(ss1.stat[key]), length(ss2.stat[key]))>0 ? ExoplanetsSysSim.ksstats(ss1.stat[key], ss2.stat[key])[5] : Inf

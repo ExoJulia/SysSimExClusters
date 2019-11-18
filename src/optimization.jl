@@ -4,6 +4,58 @@ using ParallelDataTransfer # just to compile a function
 
 
 """
+    draw_random_active_params(active_param_keys, active_params_box, sim_param; PT_all=ExoplanetsSysSim.ParamsTriangle[])
+
+Draw a set of active parameter values randomly (uniformly in the given box). If there are any triangle-transformed pairs of parameters (`PT_all` is not empty), those parameters are drawn uniformly in their respective triangles. NOTE: also rewrites the active parameter values in `sim_param` with the drawn values!
+
+# Arguments:
+- `active_param_keys::Vector{String}`: list of active parameter keys.
+- `active_params_box::Vector{Tuple{Float64,Float64}}`: list of tuples specifying the bounds for each active parameter.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}=ExoplanetsSysSim.ParamsTriangle[]`: a vector of objects containing the pairs of parameters that are triangle-transformed (default is an empty list indicating no transformed parameters).
+NOTE 1: the parameters in `active_param_keys` should be sorted (in alphabetical order), such that the function `make_vector_of_active_param_keys(sim_param)` returns the same list, and the tuples in `active_params_box` should correspond to these parameters.
+NOTE 2: the bounds in `active_params_box` for transformed parameters should be simply (0,1).
+
+# Returns:
+- `active_param_draw::Vector{Float64}`: a list of randomly drawn active parameter values.
+- `active_param_draw_r::Vector{Float64}`: a list of randomly drawn active parameter values, with transformed parameters having their transformed values (i.e. `r1`, `r2` pairs with values in (0,1)).
+Note: also writes the drawn active parameter values to `sim_param`!
+"""
+function draw_random_active_params(active_param_keys::Vector{String}, active_params_box::Vector{Tuple{Float64,Float64}}, sim_param::SimParam; PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}=ExoplanetsSysSim.ParamsTriangle[])
+    @assert length(active_param_keys) == length(active_params_box)
+
+    for (i,param_key) in enumerate(active_param_keys)
+        active_param_draw = active_params_box[i][1] .+ (active_params_box[i][2] - active_params_box[i][1])*rand(1)
+        add_param_active(sim_param, param_key, active_param_draw[1])
+    end
+
+    # To draw any transformed parameters:
+    if length(PT_all) > 0
+        params_r = zeros(length(active_param_keys))
+        for (i,pt) in enumerate(PT_all)
+            r1r2 = (rand(), rand())
+            params_r[collect(pt.id_xy)] .= r1r2
+            transformed_params = map_square_to_triangle(r1r2, pt)
+            add_param_active(sim_param, active_param_keys[pt.id_xy[1]], transformed_params[1])
+            add_param_active(sim_param, active_param_keys[pt.id_xy[2]], transformed_params[2])
+        end
+
+        active_param_draw = make_vector_of_sim_param(sim_param)
+        active_param_draw_r = deepcopy(active_param_draw)
+        active_param_draw_r[params_r .!= 0] .= params_r[params_r .!= 0]
+    else # there are no transformed params
+        active_param_draw = make_vector_of_sim_param(sim_param)
+        active_param_draw_r = Float64[]
+    end
+
+    return (active_param_draw, active_param_draw_r)
+end
+
+
+
+
+
+"""
     simulate_catalog_and_calc_all_distances_dict(active_param, sim_param; ss_fit, AD_mod=true)
 
 Simulate a catalog with the parameters in `active_param` and compute the distances compared to the catalog provided with `ss_fit`.
@@ -205,14 +257,13 @@ end
 
 
 """
-    target_function_transformed_params(active_param_transformed, transformed_indices, A, B, C, sim_param; ss_fit, dists_include, weights, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
+    target_function_transformed_params(active_param_transformed, PT_all, sim_param; ss_fit, dists_include, weights, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
 
 Same as `target_function`, but takes in a list of active parameters that have a pair of variables transformed via the triangle transformation. Evaluate `target_function` after transforming the transformed parameters back to physical model parameters.
 
 # Arguments:
 - `active_param_transformed::Vector{Float64}`: a vector of values for the transformed active model parameters.
-- `transformed_indices::Vector{Int64}`: a vector of indices for the two transformed parameters.
-- `A::Vector{Float64}`, `B::Vector{Float64}`, `C::Vector{Float64}`: vertices for the triangle defining the region of allowed values for the two transformed parameters (the labeling of A/B/C does not matter).
+- `PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}`: a vector of objects containing the pairs of parameters that are triangle-transformed.
 - `sim_param::SimParam`: a SimParam object containing various simulation parameters.
 - `ss_fit::CatalogSummaryStatistics`: an object containing the summary statistics of the catalog we are trying to fit to.
 - `dists_include::Vector{String}`: a vector of strings for the names of the distance terms to be included in the total distance.
@@ -225,13 +276,14 @@ Same as `target_function`, but takes in a list of active parameters that have a 
 # Returns:
 The total weighted distance (a Float64) if `all_dist=false` or the individual weighted distance terms (a Vector{Float64}) if `all_dist=true` of the simulated catalog compared to the input catalog.
 """
-function target_function_transformed_params(active_param_transformed::Vector{Float64}, transformed_indices::Vector{Int64}, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64}, sim_param::SimParam; ss_fit::CatalogSummaryStatistics, dists_include::Vector{String}, weights::Dict{String,Float64}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+function target_function_transformed_params(active_param_transformed::Vector{Float64}, PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}, sim_param::SimParam; ss_fit::CatalogSummaryStatistics, dists_include::Vector{String}, weights::Dict{String,Float64}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
 
-    r1, r2 = active_param_transformed[transformed_indices]
-    @assert 0. <= r1 <= 1.
-    @assert 0. <= r2 <= 1.
     active_param = deepcopy(active_param_transformed)
-    active_param[transformed_indices] = map_square_to_triangle(r1, r2, A, B, C)
+    for pt in PT_all
+        id_xy = collect(pt.id_xy)
+        r1r2 = Tuple(active_param_transformed[id_xy])
+        active_param[id_xy] .= map_square_to_triangle(r1r2, pt)
+    end
 
     return target_function(active_param, sim_param; ss_fit=ss_fit, dists_include=dists_include, weights=weights, AD_mod=AD_mod, all_dist=all_dist, save_dist=save_dist, f=f)
 end
@@ -239,14 +291,13 @@ end
 
 
 """
-    target_function_transformed_params_split_stars(active_param_transformed, transformed_indices, A, B, C, sim_param; cssc_fit, dists_include_all, weights_all, names_samples, dists_include_samples, weights_samples, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
+    target_function_transformed_params_split_stars(active_param_transformed, PT_all, sim_param; cssc_fit, dists_include_all, weights_all, names_samples, dists_include_samples, weights_samples, AD_mod=true, all_dist=false, save_dist=true, f=nothing)
 
 Same as `target_function_split_stars`, but takes in a list of active parameters that have a pair of variables transformed via the triangle transformation. Evaluate `target_function_split_stars` after transforming the transformed parameters back to physical model parameters.
 
 # Arguments:
 - `active_param_transformed::Vector{Float64}`: a vector of values for the transformed active model parameters.
-- `transformed_indices::Vector{Int64}`: a vector of indices for the two transformed parameters.
-- `A::Vector{Float64}`, `B::Vector{Float64}`, `C::Vector{Float64}`: vertices for the triangle defining the region of allowed values for the two transformed parameters (the labeling of A/B/C does not matter).
+- `PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}`: a vector of objects containing the pairs of parameters that are triangle-transformed.
 - `sim_param::SimParam`: a SimParam object containing various simulation parameters.
 - `cssc_fit::CatalogSummaryStatisticsCollection`: object containing a number of CatalogSummaryStatistics objects for each sample to compare to.
 - `dists_include_all::Vector{String}`: vector of strings for the names of the distance terms of the combined sample to be included in the total distance.
@@ -262,13 +313,14 @@ Same as `target_function_split_stars`, but takes in a list of active parameters 
 # Returns:
 The total weighted distance (a Float64) if `all_dist=false` or the individual weighted distance terms (a Vector{Float64}) if `all_dist=true` of the simulated catalog compared to the input catalog.
 """
-function target_function_transformed_params_split_stars(active_param_transformed::Vector{Float64}, transformed_indices::Vector{Int64}, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64}, sim_param::SimParam; cssc_fit::CatalogSummaryStatisticsCollection, dists_include_all::Vector{String}, weights_all::Dict{String,Float64}, names_samples::Array{String,1}, dists_include_samples::Array{Vector{String},1}, weights_samples::Array{Dict{String,Float64},1}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+function target_function_transformed_params_split_stars(active_param_transformed::Vector{Float64}, PT_all::Vector{ExoplanetsSysSim.ParamsTriangle}, sim_param::SimParam; cssc_fit::CatalogSummaryStatisticsCollection, dists_include_all::Vector{String}, weights_all::Dict{String,Float64}, names_samples::Array{String,1}, dists_include_samples::Array{Vector{String},1}, weights_samples::Array{Dict{String,Float64},1}, AD_mod::Bool=true, all_dist::Bool=false, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
 
-    r1, r2 = active_param_transformed[transformed_indices]
-    @assert 0. <= r1 <= 1.
-    @assert 0. <= r2 <= 1.
     active_param = deepcopy(active_param_transformed)
-    active_param[transformed_indices] = map_square_to_triangle(r1, r2, A, B, C)
+    for pt in PT_all
+        id_xy = collect(pt.id_xy)
+        r1r2 = Tuple(active_param_transformed[id_xy])
+        active_param[id_xy] .= map_square_to_triangle(r1r2, pt)
+    end
 
     return target_function_split_stars(active_param, sim_param; cssc_fit=cssc_fit, dists_include_all=dists_include_all, weights_all=weights_all, names_samples=names_samples, dists_include_samples=dists_include_samples, weights_samples=weights_samples, AD_mod=AD_mod, all_dist=all_dist, save_dist=save_dist, f=f)
 end
@@ -435,7 +487,7 @@ end
 
 
 """
-    compute_weights_target_fitness_std_perfect_model_split_stars(num_evals, sim_param; cssc_ref, names_samples, ss_refs, AD_mod=true, save_dist=true, f=nothing)
+    compute_weights_target_fitness_std_perfect_model_split_stars(num_evals, sim_param; cssc_ref, names_samples, AD_mod=true, save_dist=true, f=nothing)
 
 Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, by simulating the same model many times.
 
@@ -531,6 +583,140 @@ function compute_weights_target_fitness_std_perfect_model_split_stars(num_evals:
         println(f, "#")
         println(f, "# Total weighted distance (all terms): ", totdist_w_mean, " +/- ", totdist_w_std)
         println(f, "# elapsed time: ", t_elapsed, " seconds")
+        println(f, "#")
+    end
+
+    return (active_param_true, weights_dicts, totdist_w_mean, totdist_w_std)
+end
+
+
+
+"""
+    compute_weights_target_fitness_std_perfect_model_all_pairs_split_stars(num_evals, sim_param; star_id_samples, names_samples, AD_mod=true, save_dist=true, f=nothing)
+
+Compute the weights (1/rms) for each distance term, as well as the mean and standard deviation of the total weighted distance, by simulating the same model many times.
+
+# Arguments:
+- `num_evals::Int64`: number of times to simulate the same model to compare to the reference model.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `star_id_samples::Vector{Vector{Int64}}`: list of the vectors of stellar id's for the split stellar catalogs.
+- `names_samples::Vector{String}`: names of the split stellar catalog files.
+- `AD_mod::Bool=true`: whether to use the original (if false) or modified (if true) AD distance.
+- `save_dist::Bool=true`: whether to save all the weighted distances to a file.
+- `f::Union{IOStream,Nothing}=nothing`: file for printing distances to, if provided.
+
+# Returns:
+- `active_param_true::Vector{Float64}`: a vector of the active model parameters assumed for the 'perfect' model.
+- `weights_dicts::Dict{String,Dict{String,Float64}}`: a dictionary of dictionaries containing weights for the individual distance terms for each sample.
+- `totdist_w_mean::Float64`: the mean of the total weighted distance.
+- `totdist_w_std::Float64`: the standard deviation of the total weighted distance.
+"""
+function compute_weights_target_fitness_std_perfect_model_all_pairs_split_stars(num_evals::Int64, sim_param::SimParam; star_id_samples::Vector{Vector{Int64}}, names_samples::Vector{String}, AD_mod::Bool=true, save_dist::Bool=true, f::Union{IOStream,Nothing}=nothing)
+
+    names_list = ["all"; names_samples]
+
+    # First, generate a number of simulated catalogs from the same model and record their summary statistics:
+    cssc_evals = Vector{CatalogSummaryStatisticsCollection}(undef, num_evals)
+    t_elapsed_evals = @elapsed begin
+        active_param_true = make_vector_of_sim_param(sim_param)
+        println("# True values: ", active_param_true)
+
+        for i in 1:num_evals
+            # Generate a simulated catalog:
+            cat_phys = generate_kepler_physical_catalog(sim_param)
+            cat_phys_cut = ExoplanetsSysSim.generate_obs_targets(cat_phys, sim_param)
+            cat_obs = observe_kepler_targets_single_obs(cat_phys_cut, sim_param)
+
+            # Compute the summary statistics:
+            cssc_evals[i] = calc_summary_stats_collection_model(cat_obs, names_samples, star_id_samples, sim_param)
+
+            println(i)
+        end
+    end
+
+    # Then, compute the distances between every pair of the simulated catalogs:
+    t_elapsed_dists = @elapsed begin
+        if save_dist
+            println(f, "# AD_mod: ", AD_mod)
+            println(f, "# Format: Counts: [observed multiplicities 1][total planets 1, total planet pairs 1][observed multiplicities 2][total planets 2, total planet pairs 2]")
+            println(f, "# Format: d_all_keys: [names of distance terms]")
+            println(f, "# Format: d_all_vals: [distance terms]")
+        end
+
+        # Compute the distances once to get the total number of distance terms and their keys:
+        dists, counts = calc_all_distances_dict(sim_param, cssc_evals[1].css_samples["all"], cssc_evals[2].css_samples["all"]; AD_mod=AD_mod)
+        dists_keys_all = collect(keys(dists))
+        n_dists = length(dists_keys_all) # total number of individual distance terms
+
+        # Compute distances for every combination of summary statistics:
+        dists_all_vals_evals = Dict([(name, zeros(binomial(num_evals,2),n_dists)) for name in names_list])
+        ij_counter = 0
+        for i in 1:num_evals
+            for j in (i+1):num_evals
+                ij_counter += 1
+
+                println("# i,j: ", i, ",", j)
+                if save_dist
+                    println(f, "# i,j: ", i, ",", j)
+                end
+
+                # Compute and write the distances:
+                for (n,name) in enumerate(names_list)
+
+                    # Compute the individual and total weighted distances:
+                    dists, counts = calc_all_distances_dict(sim_param, cssc_evals[i].css_samples[name], cssc_evals[j].css_samples[name]; AD_mod=AD_mod)
+                    dists_all_keys, dists_all_vals = keys(dists), values(dists)
+
+                    dists_all_vals_evals[name][ij_counter,:] .= dists_all_vals
+
+                    # Print and/or write the distances to file:
+                    println("[$name] Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]], counts["Nmult2"], [counts["n_pl2"], counts["n_pairs2"]])
+                    println("[$name] d_all_keys: ", dists_all_keys)
+                    println("[$name] d_all_vals: ", dists_all_vals)
+                    if save_dist
+                        println(f, "[$name] Counts: ", counts["Nmult1"], [counts["n_pl1"], counts["n_pairs1"]], counts["Nmult2"], [counts["n_pl2"], counts["n_pairs2"]])
+                        println(f, "[$name] d_all_keys: ", dists_all_keys)
+                        println(f, "[$name] d_all_vals: ", dists_all_vals)
+                    end
+                end
+
+                println("#")
+                if save_dist
+                    println(f, "#")
+                end
+            end
+        end
+
+        @assert ij_counter == binomial(num_evals,2)
+        println("# Combinations: ", ij_counter)
+            if save_dist
+            println(f, "# Combinations: ", ij_counter)
+        end
+    end
+
+    weights_dicts = Dict([(name, Dict{String,Float64}()) for name in names_list])
+    totdist_w_mean_list = Float64[]
+    totdist_w_std_list = Float64[]
+    for name in names_list
+        weights, totdist_w_mean, totdist_w_std = compute_weights_target_fitness_std_from_array(dists_all_vals_evals[name], dists_keys_all; dists_include=dists_keys_all, save_dist=save_dist, f=f)
+        weights_dicts[name] = weights
+        push!(totdist_w_mean_list, totdist_w_mean)
+        push!(totdist_w_std_list, totdist_w_std)
+    end
+
+    totdist_w_mean = sum(totdist_w_mean_list)
+    totdist_w_std = sqrt(sum(totdist_w_std_list.^2))
+
+    println("#")
+    println("# Total weighted distance (all terms): ", totdist_w_mean, " +/- ", totdist_w_std)
+    println("# elapsed time (simulating catalogs): ", t_elapsed_evals, " seconds")
+    println("# elapsed time (computing distances): ", t_elapsed_dists, " seconds")
+    println("#")
+    if save_dist
+        println(f, "#")
+        println(f, "# Total weighted distance (all terms): ", totdist_w_mean, " +/- ", totdist_w_std)
+        println(f, "# elapsed time (simulating catalogs): ", t_elapsed_evals, " seconds")
+        println(f, "# elapsed time (computing distances): ", t_elapsed_dists, " seconds")
         println(f, "#")
     end
 
