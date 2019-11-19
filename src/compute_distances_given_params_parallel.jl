@@ -1,5 +1,6 @@
 #Pkg.add("ParallelDataTransfer")
 using Distributed
+using Random
 
 addprocs(2) #number of additional processors
 
@@ -17,15 +18,15 @@ addprocs(2) #number of additional processors
 
 ##### To start saving the model iterations in the optimization into a file:
 
-model_name = "Clustered_P_R_broken_R"
-use_KS_or_AD = "KS" #'KS' or 'AD' or 'Both' (need to be careful counting indices for 'dists_exclude'!!!)
+model_name = "Clustered_P_R"
+names_split = ["bluer", "redder"]
 AD_mod = true
-Kep_or_Sim = "Kep" #'Kep' or 'Sim'
-num_targs = 79935*5
+num_targs = 79935
 max_incl_sys = 0.
-dists_exclude = [2,3,8,12,13,15,16,17] #Int64[] if want to include all distances
+dists_include_split = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
+dists_include_all = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 
-data_table = CSV.read("../emulator/GP_files/Active_params_distances_table_best100000_every10.txt", delim=" ", allowmissing=:none)
+data_table = CSV.read("../emulator/GP_files/Active_params_distances_table_best100000_every10.txt", delim=" ")
 n_params = length(make_vector_of_active_param_keys(sim_param))
 params_keys = names(data_table)[1:n_params]
 @assert all(make_vector_of_active_param_keys(sim_param) .== String.(params_keys))
@@ -44,24 +45,29 @@ write_model_params(f, sim_param)
 
 
 
-##### To run the same model multiple times to see how it compares to a simulated catalog with the same parameters:
+##### To split the Kepler data into redder and bluer halves:
 
-using Random
-Random.seed!(1234) #to have the same reference catalog and simulated catalogs for calculating the weights
+bprp = stellar_catalog[:bp_rp]
+med_bprp = median(bprp)
+idx_bluer = collect(1:size(stellar_catalog,1))[bprp .< med_bprp]
+idx_redder = collect(1:size(stellar_catalog,1))[bprp .>= med_bprp]
+star_id_split = [idx_bluer, idx_redder]
 
-#To generate a simulated catalog to fit to:
-cat_phys = generate_kepler_physical_catalog(sim_param)
-cat_phys_cut = ExoplanetsSysSim.generate_obs_targets(cat_phys,sim_param)
-cat_obs = observe_kepler_targets_single_obs(cat_phys_cut,sim_param)
-summary_stat_ref = calc_summary_stats_model(cat_obs,sim_param)
+cssck = calc_summary_stats_collection_Kepler(stellar_catalog, planet_catalog, names_split, star_id_split, sim_param)
 
-@passobj 1 workers() summary_stat_ref #to send the 'summary_stat_ref' object to all workers
 
-#To simulate more observed planets for the subsequent model generations:
+
+
+
+##### To load a file with the weights:
+
+# To simulate more observed planets for the subsequent model generations:
 @everywhere add_param_fixed(sim_param,"num_targets_sim_pass_one", num_targs)
-@everywhere add_param_fixed(sim_param,"max_incl_sys", max_incl_sys) #degrees; 0 (deg) for isotropic system inclinations; set closer to 90 (deg) for more transiting systems
+@everywhere add_param_fixed(sim_param,"max_incl_sys", max_incl_sys)
 
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file("Clustered_P_R_broken_R_weights_ADmod_$(AD_mod)_targs399675_evals1000.txt", 1000, use_KS_or_AD ; weight=true, dists_exclude=dists_exclude, save_dist=true)
+# To load and compute the weights, target distance, and target distance std from a precomputed file:
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file_split_samples("Clustered_P_R_split_stars_weights_ADmod_$(AD_mod)_targs79935_evals100_all_pairs.txt", 4950, sim_param; names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], dists_include_all=dists_include_all, f=f)
+weights_split = [weights["bluer"], weights["redder"]]
 
 
 
@@ -70,18 +76,22 @@ active_param_true, weights, target_fitness, target_fitness_std = compute_weights
 ##### To recompute the model with the parameters in the table:
 
 println(f, "# Active parameters: ", String.(params_keys))
-println(f, "# Format: Active_params: [active parameter values]")
-println(f, "# Format: Dist: [distances][total distance]")
-println(f, "# Format: Dist_weighted: [weighted distances][total weighted distance]")
-println(f, "# Distances used: ", use_KS_or_AD)
 println(f, "# AD_mod: ", AD_mod)
+println(f, "# Distances used (split): ", dists_include_split)
+println(f, "# Distances used (all): ", dists_include_all)
+println(f, "#")
+println(f, "# Format: Active_params: [active parameter values]")
+println(f, "# Format: [sample] Counts: [observed multiplicities][total planets, total planet pairs]")
+println(f, "# Format: [sample] d_used_keys: [names of distance terms]")
+println(f, "# Format: [sample] d_used_vals: [distance terms][sum of distance terms]")
+println(f, "# Format: [sample] d_used_vals_w: [weighted distance terms][sum of weighted distance terms]")
 println(f, "#")
 
 Random.seed!()
 
 t_elapsed = @elapsed begin
     @sync @distributed for i in 1:size(params_array,1)
-        target_function(params_array[i,:], use_KS_or_AD, Kep_or_Sim ; AD_mod=AD_mod, weights=weights, all_dist=false, save_dist=true)
+        target_function_split_stars(params_array[i,:], sim_param; cssc_fit=cssck, dists_include_all=dists_include_all, weights_all=weights["all"], names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], weights_samples=weights_split, AD_mod=AD_mod, f=f)
     end
 end
 
