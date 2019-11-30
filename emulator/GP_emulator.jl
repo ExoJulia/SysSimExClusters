@@ -213,12 +213,21 @@ prior_bounds = nothing
 
 
 
-# Clustered_P_R_fswp_bprp:
-data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Split_stars/Clustered_P_R_fswp_bprp/Params13_AD/durations_AD/GP_files"
+# Clustered_P_R_fswp:
+#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Split_stars/Clustered_P_R_fswp/Params12_AD/durations_AD/GP_files"
 
 # Transformed:
-hparams_best = [2.7, 0.2, 0.2, 0.6, 0.4, 1., 1., 1., 1.5, 0.02, 30., 1., 0.2, 0.1]
-prior_bounds = [(0.1, 0.7), (0.3, 0.9), (-0.2, 1.), (0.5, 2.5), (-1., 2.), (-0.8, 1.2), (-2.5, -0.5), (-6., -3.), (0., 0.05), (0., 90.), (0., 3.), (0.1, 0.5), (0.1, 0.3)]
+#hparams_best = [2.7, 0.2, 0.2, 0.4, 1., 1., 1., 1.5, 0.02, 30., 1., 0.2, 0.1]
+#prior_bounds = [(0.1, 0.7), (0.3, 0.9), (0.5, 2.5), (-1., 2.), (-0.8, 1.2), (-2.5, -0.5), (-6., -3.), (0., 0.04), (0., 90.), (0., 2.4), (0.1, 0.5), (0.1, 0.3)]
+
+
+
+# Clustered_P_R_fswp_bprp:
+#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Split_stars/Clustered_P_R_fswp_bprp/Params13_AD/durations_AD/GP_files"
+
+# Transformed:
+#hparams_best = [2.7, 0.2, 0.2, 0.6, 0.4, 1., 1., 1., 1.5, 0.02, 30., 1., 0.2, 0.1]
+#prior_bounds = [(0.1, 0.7), (0.3, 0.9), (0., 1.), (0.5, 2.5), (-1., 2.), (-0.8, 1.2), (-2.5, -0.5), (-6., -3.), (0., 0.04), (0., 90.), (0., 2.4), (0.1, 0.5), (0.1, 0.3)]
 
 
 
