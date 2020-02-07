@@ -1,4 +1,5 @@
 include("misc_functions.jl")
+include("complexity_stats.jl")
 
 
 
@@ -566,6 +567,56 @@ end
 
 
 """
+    calc_summary_stats_complexity_stats_GF2020!(css, cat_obs, sim_param)
+
+Compute the lists of system level metrics taken from or inspired by Gilbert & Fabrycky (2020) in the observed catalog and add them to the summary statistics (`css.stat`).
+
+# Arguments:
+- `css::CatalogSummaryStatistics`: object containing the summary statistics.
+- `cat_obs::KeplerObsCatalog`: an observed catalog.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+
+# Returns:
+- `radii_partitioning_list::Vector{Float64}`: list of "radius partitioning" (disequilibirum normalized to (0,1)), for systems with 2+ observed planets.
+- `radii_monotonicity_list::Vector{Float64}`: list of "radius monotonicity", for systems with 2+ observed planets.
+- `gap_complexity_list::Vector{Float64}`: list of "gap complexity", for systems with 3+ observed planets.
+Also writes these lists to `css.stat`.
+"""
+function calc_summary_stats_complexity_stats_GF2020!(css::CatalogSummaryStatistics, cat_obs::KeplerObsCatalog, sim_param::SimParam)
+    # Allocate arrays to store values for each tranet:
+    num_n_tranet_systems = calc_summary_stats_num_n_tranet_systems!(css, cat_obs, sim_param)
+    radii_partitioning_list = zeros(sum(num_n_tranet_systems[2:end]))
+    radii_monotonicity_list = zeros(sum(num_n_tranet_systems[2:end]))
+    gap_complexity_list = zeros(sum(num_n_tranet_systems[3:end]))
+
+    max_tranets_in_sys = get_int(sim_param, "max_tranets_in_sys")
+    @assert max_tranets_in_sys >= 1
+    i2 = 0
+    i3 = 0
+    for targ in cat_obs.target # For each target
+        radii_earths = map(j -> (sqrt(targ.obs[j].depth)*targ.star.radius) / ExoplanetsSysSim.earth_radius, 1:length(targ.obs))
+        periods = map(j -> targ.obs[j].period, 1:length(targ.obs))
+
+        if length(targ.obs) >= 2
+            i2 += 1
+            radii_partitioning_list[i2] = partitioning(radii_earths)
+            radii_monotonicity_list[i2] = monotonicity_GF2020(radii_earths)
+            if length(targ.obs) >= 3
+                i3 += 1
+                gap_complexity_list[i3] = gap_complexity_GF2020(periods)
+            end
+        end
+    end
+    css.stat["radii_partitioning"] = radii_partitioning_list
+    css.stat["radii_monotonicity"] = radii_monotonicity_list
+    css.stat["gap_complexity"] = gap_complexity_list
+
+    return (radii_partitioning_list, radii_monotonicity_list, gap_complexity_list)
+end
+
+
+
+"""
     calc_summary_stats_model(cat_obs, sim_param)
 
 Compute all the summary statistics and compile them into a `CatalogSummaryStatistics` object.
@@ -588,6 +639,7 @@ function calc_summary_stats_model(cat_obs::KeplerObsCatalog, sim_param::SimParam
     calc_summary_stats_period_radius_ratios_neighbors!(css, cat_obs, sim_param)
     calc_summary_stats_radius_ratios_neighbors_photoevap_boundary_Carrera2018!(css, cat_obs, sim_param) # to also compute arrays of radius ratios above, below, and across photoevaporation boundary
     calc_summary_stats_duration_ratios_neighbors!(css, cat_obs, sim_param)
+    calc_summary_stats_complexity_stats_GF2020!(css, cat_obs, sim_param)
 
     return css
 end
