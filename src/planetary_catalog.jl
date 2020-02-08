@@ -70,13 +70,14 @@ function keep_planet_candidates_given_sim_param(planet_catalog::DataFrame; sim_p
 
     planets_keep = planets_keep[(planets_keep[:koi_period] .> get_real(sim_param,"min_period")) .& (planets_keep[:koi_period] .< get_real(sim_param,"max_period")), :] # to make additional cuts in period P to be comparable to our simulated sample
     planets_keep = planets_keep[(planets_keep[:koi_prad] .> get_real(sim_param,"min_radius")/ExoplanetsSysSim.earth_radius) .& (planets_keep[:koi_prad] .< get_real(sim_param,"max_radius")/ExoplanetsSysSim.earth_radius) .& (.~ismissing.(planets_keep[:koi_prad])), :] # to make additional cuts in planetary radii to be comparable to our simulated sample
+    planets_keep[:koi_period] = collect(skipmissing(planets_keep[:koi_period]))
+    planets_keep[:koi_prad] = collect(skipmissing(planets_keep[:koi_prad]))
     println("After applying our period and radius cuts (final count): ", size(planets_keep, 1))
+
     return planets_keep
 end
 
 @time planets_cleaned = keep_planet_candidates_given_sim_param(planet_catalog; sim_param=sim_param, stellar_catalog=stellar_catalog, recompute_radii=true)
-planets_cleaned[:koi_period] = collect(skipmissing(planets_cleaned[:koi_period]))
-planets_cleaned[:koi_prad] = collect(skipmissing(planets_cleaned[:koi_prad]))
 
 # If we want to write the cleaned planetary catalog and the stellar catalog to a csv file, keeping only the columns we need:
 #CSV.write("q1_q17_dr25_gaia_fgk_koi_cleaned.csv", planets_cleaned[[:kepid, :kepoi_name, :koi_disposition, :koi_pdisposition, :koi_score, :koi_period, :koi_duration, :koi_depth, :koi_prad, :koi_steff, :koi_slogg, :koi_srad, :koi_smass]])
