@@ -540,6 +540,7 @@ Distribute the AMD of a planet amongst its eccentricity and inclination componen
 
 # Returns:
 - `e::Real`: orbital eccentricity.
+- `ω::Real`: argument of pericenter (rad).
 - `i::Real`: inclination (rad) relative to invariant plane.
 """
 function distribute_AMD_planet_ecc_incl_random(AMD::Real, μ::Real, a::Real)
@@ -547,7 +548,8 @@ function distribute_AMD_planet_ecc_incl_random(AMD::Real, μ::Real, a::Real)
     # Thus e = sqrt(x^2 + y^2) and i = asin(z)
 
     Λ = μ*sqrt(a) # angular momentum of circular orbit
-    @assert(AMD < Λ) # too much AMD if AMD >= Λ (planet can collide with star)
+    @assert(AMD <= Λ) # too much AMD if AMD >= Λ (planet can collide with star)
+    # NOTE: allowing AMD = Λ for case of a single planet, where the critical AMD is Λ
     sumsq_xyz = (AMD/Λ)*(2 - AMD/Λ) # x^2+y^2+z^2, related to the total AMD
 
     # Randomly assign x^2, y^2, z^2 such that their sum equals sumsq_xyz:
@@ -555,17 +557,18 @@ function distribute_AMD_planet_ecc_incl_random(AMD::Real, μ::Real, a::Real)
     xsq, ysq, zsq = [split[1], split[2]-split[1], 1-split[2]] .* sumsq_xyz
 
     e = sqrt(xsq + ysq) # eccentricity
+    ω = asin(sqrt(xsq)/e) # argument of pericenter
     i = asin(sqrt(zsq)) # inclination relative to invariant plane (rad)
     @assert(sqrt(1 - e^2)*cos(i) >= 1 - AMD/Λ) # NOTE: I expected this to be equal given how we assigned x^2+y^2+z^2 = (AMD/Λ)*(2 - AMD/Λ), but in practice it is >= (which does not break AMD stability since this implies the true AMD given (e,i) is less than the AMD provided)
-    @info("e = $e, i = $(i*180/π) deg")
+    @info("e = $e, ω = $(ω*180/π) deg, i = $(i*180/π) deg")
 
-    return e, i
+    return e, ω, i
 end
 
 # Distribute the AMD of a planet amongst its eccentricity and inclination:
 function distribute_AMD_planet_ecc_incl(AMD::Real, μ::Real, a::Real)
-    e, i = distribute_AMD_planet_ecc_incl_random(AMD, μ, a)
-    return e, i
+    e, ω, i = distribute_AMD_planet_ecc_incl_random(AMD, μ, a)
+    return e, ω, i
 end
 
 
@@ -585,6 +588,7 @@ NOTE 2: by definition, the system should ALWAYS be AMD-stable if drawn using thi
 # Returns:
 - `AMD::Vector{Real}`: list of AMD assigned to the planets.
 - `e::Vector{Float64}`: list of eccentricities drawn for the planets.
+- `ω::Vector{Float64}`: list of arguments of pericenter (rad) drawn for the planets.
 - `i::Vector{Float64}`: list of inclinations (rad) relative to the invariant plane drawn for the planets.
 """
 function draw_ecc_incl_system_critical_AMD(μ::Vector{T}, a::Vector{T}; check_stability::Bool=false) where T <: Real
@@ -595,9 +599,10 @@ function draw_ecc_incl_system_critical_AMD(μ::Vector{T}, a::Vector{T}; check_st
     AMD = distribute_AMD_planets(AMD_tot, μ) # list of AMD distributed to each planet
 
     e = Vector{Float64}(undef, N)
+    ω = Vector{Float64}(undef, N)
     i = Vector{Float64}(undef, N)
     for n in 1:N
-        e[n], i[n] = distribute_AMD_planet_ecc_incl(AMD[n], μ[n], a[n])
+        e[n], ω[n], i[n] = distribute_AMD_planet_ecc_incl(AMD[n], μ[n], a[n])
     end
 
     # To double check that the system is AMD stable given the drawn e and i:
@@ -606,5 +611,5 @@ function draw_ecc_incl_system_critical_AMD(μ::Vector{T}, a::Vector{T}; check_st
         @assert(all(stats .== :Stable))
     end
 
-    return AMD, e, i
+    return AMD, e, ω, i
 end
