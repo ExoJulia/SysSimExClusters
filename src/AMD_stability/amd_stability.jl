@@ -560,7 +560,7 @@ function distribute_AMD_planet_ecc_incl_random(AMD::Real, μ::Real, a::Real)
     ω = asin(sqrt(xsq)/e) # argument of pericenter
     i = asin(sqrt(zsq)) # inclination relative to invariant plane (rad)
     @assert(sqrt(1 - e^2)*cos(i) >= 1 - AMD/Λ) # NOTE: I expected this to be equal given how we assigned x^2+y^2+z^2 = (AMD/Λ)*(2 - AMD/Λ), but in practice it is >= (which does not break AMD stability since this implies the true AMD given (e,i) is less than the AMD provided)
-    @info("e = $e, ω = $(ω*180/π) deg, i = $(i*180/π) deg")
+    #@info("e = $e, ω = $(ω*180/π) deg, i = $(i*180/π) deg")
 
     return e, ω, i
 end
