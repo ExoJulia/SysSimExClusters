@@ -4,7 +4,7 @@ end
 
 function generate_stable_cluster(star::StarT, sim_param::SimParam; n::Int64=1) where {StarT<:StarAbstract}
 
-    @assert n >= 1
+    @assert(n >= 1)
 
     # Load functions and model parameters:
     generate_sizes = get_function(sim_param, "generate_sizes")
@@ -109,19 +109,19 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
     f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
     med_color = get_real(sim_param, "med_color")
-    @assert 0<=f_stars_with_planets_attempted_at_med_color<=1
+    @assert(0 <= f_stars_with_planets_attempted_at_med_color <= 1)
 
     f_stars_with_planets_attempted = f_stars_with_planets_attempted_color_slope*(star_color - med_color) + f_stars_with_planets_attempted_at_med_color
     f_stars_with_planets_attempted = min(f_stars_with_planets_attempted, 1.)
     f_stars_with_planets_attempted = max(f_stars_with_planets_attempted, 0.)
-    @assert 0<=f_stars_with_planets_attempted<=1
+    @assert(0 <= f_stars_with_planets_attempted <= 1)
     #
 
     # Load functions and model parameters for drawing planet properties:
     #=
     if haskey(sim_param, "f_stars_with_planets_attempted")
         f_stars_with_planets_attempted = get_real(sim_param, "f_stars_with_planets_attempted")
-        @assert 0<=f_stars_with_planets_attempted<=1
+        @assert(0 <= f_stars_with_planets_attempted <= 1)
     else
         f_stars_with_planets_attempted = 1.
     end
@@ -145,170 +145,146 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     incl_sys = acos(cos(max_incl_sys*pi/180)*rand()) # acos(rand()) for isotropic distribution of system inclinations; acos(cos(X*pi/180)*rand()) gives angles from X (deg) to 90 (deg)
 
     # Generate a set of periods, planet radii, and planet masses:
-    attempts_system = 0
-    max_attempts_system = 1 # NOTE: currently this should not matter; each system is always attempted just once
-    local num_pl, clusteridlist, Plist, Rlist, masslist, ecclist, omegalist, ascnodelist, meananomlist, inclmutlist, incllist
-    valid_system = false
-    while !valid_system && attempts_system < max_attempts_system
+    local num_pl, clusteridlist, Plist, Rlist, masslist, ecclist, ωlist, Ωlist, meananomlist, inclmutlist, incllist
 
-        # First, generate number of clusters (to attempt) and planets (to attempt) in each cluster:
-        num_clusters = generate_num_clusters(star, sim_param)::Int64
-        num_pl_in_cluster = map(x -> generate_num_planets_in_cluster(star, sim_param)::Int64, 1:num_clusters)
-        num_pl_in_cluster_true = zeros(Int64, num_clusters) # true numbers of planets per cluster, after subtracting the number of NaNs
-        num_pl = sum(num_pl_in_cluster)
-        #println("num_clusters: ", num_clusters, " ; num_pl_in_clusters", num_pl_in_cluster)
+    # First, generate number of clusters (to attempt) and planets (to attempt) in each cluster:
+    num_clusters = generate_num_clusters(star, sim_param)::Int64
+    num_pl_in_cluster = map(x -> generate_num_planets_in_cluster(star, sim_param)::Int64, 1:num_clusters)
+    num_pl_in_cluster_true = zeros(Int64, num_clusters) # true numbers of planets per cluster, after subtracting the number of NaNs
+    num_pl = sum(num_pl_in_cluster)
+    #println("num_clusters: ", num_clusters, " ; num_pl_in_clusters", num_pl_in_cluster)
 
-        if num_pl==0
-            return PlanetarySystem(star)
+    if num_pl==0
+        return PlanetarySystem(star)
+    end
+
+    clusteridlist::Array{Int64,1} = Array{Int64}(undef, num_pl)
+    Plist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    Rlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    masslist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+
+    @assert(num_pl_in_cluster[1] >= 1)
+    pl_start = 1
+    pl_stop = 0
+    for c in 1:num_clusters
+        n = num_pl_in_cluster[c]
+        pl_stop += n
+
+        # Draw a stable cluster (with unscaled periods):
+        Plist_tmp::Array{Float64,1}, Rlist_tmp::Array{Float64,1}, masslist_tmp::Array{Float64,1} = generate_stable_cluster(star, sim_param, n=num_pl_in_cluster[c])
+
+        clusteridlist[pl_start:pl_stop] = ones(Int64, num_pl_in_cluster[c])*c
+        Rlist[pl_start:pl_stop], masslist[pl_start:pl_stop] = Rlist_tmp, masslist_tmp
+
+        # New sampling:
+        idx = .!isnan.(Plist[1:pl_stop-n])
+        idy = .!isnan.(Plist_tmp)
+        if any(idy)
+            period_scale = draw_periodscale_power_law_allowed_regions_mutualHill(num_pl_in_cluster_true[1:c-1], Plist[1:pl_stop-n][idx], masslist[1:pl_stop-n][idx], Plist_tmp[idy], masslist_tmp[idy], star.mass, sim_param; x0=min_period/minimum(Plist_tmp[idy]), x1=max_period/maximum(Plist_tmp[idy]), α=power_law_P)
+        else # void cluster; all NaNs
+            period_scale = NaN
         end
+        Plist[pl_start:pl_stop] = Plist_tmp .* period_scale
+        if isnan(period_scale)
+            Plist[pl_stop:end] .= NaN
+            #println("Cannot fit cluster into system; returning clusters that did fit.")
+            break
+        end
+        @assert(test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param)) # should always be true if our period scale draws are correct
+        #
 
-        clusteridlist::Array{Int64,1} = Array{Int64}(undef, num_pl)
-        Plist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        Rlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        masslist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        ecclist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        omegalist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        ascnodelist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        meananomlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        inclmutlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        incllist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-        AMDlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+        #= Old rejection sampling:
+        valid_cluster = !any(isnan.(Plist_tmp)) # if the cluster has any nans, the whole cluster is discarded
+        valid_period_scale = false
+        max_attempts_period_scale = 100
+        attempts_period_scale = 0
+        while !valid_period_scale && attempts_period_scale<max_attempts_period_scale && valid_cluster
+            attempts_period_scale += 1
 
-        @assert num_pl_in_cluster[1] >= 1
-        pl_start = 1
-        pl_stop = 0
-        for c in 1:num_clusters
-            n = num_pl_in_cluster[c]
-            pl_stop += n
+            period_scale::Array{Float64,1} = draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)
+            # NOTE: this ensures that the minimum and maximum periods will be in the range [min_period, max_period]
 
-            # Draw a stable cluster (with unscaled periods):
-            Plist_tmp::Array{Float64,1}, Rlist_tmp::Array{Float64,1}, masslist_tmp::Array{Float64,1} = generate_stable_cluster(star, sim_param, n=num_pl_in_cluster[c])
-
-            clusteridlist[pl_start:pl_stop] = ones(Int64, num_pl_in_cluster[c])*c
-            Rlist[pl_start:pl_stop], masslist[pl_start:pl_stop] = Rlist_tmp, masslist_tmp
-
-            # New sampling:
-            idx = .!isnan.(Plist[1:pl_stop-n])
-            idy = .!isnan.(Plist_tmp)
-            if any(idy)
-                period_scale = draw_periodscale_power_law_allowed_regions_mutualHill(num_pl_in_cluster_true[1:c-1], Plist[1:pl_stop-n][idx], masslist[1:pl_stop-n][idx], Plist_tmp[idy], masslist_tmp[idy], star.mass, sim_param; x0=min_period/minimum(Plist_tmp[idy]), x1=max_period/maximum(Plist_tmp[idy]), α=power_law_P)
-            else # void cluster; all NaNs
-                period_scale = NaN
-            end
             Plist[pl_start:pl_stop] = Plist_tmp .* period_scale
-            if isnan(period_scale)
-                Plist[pl_stop:end] .= NaN
-                #println("Cannot fit cluster into system; returning clusters that did fit.")
-                break
+
+            if test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param)
+                valid_period_scale = true
             end
-            @assert(test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param)) # should always be true if our period scale draws are correct
-            #
+        end  # while !valid_period_scale...
 
-            #= Old rejection sampling:
-            valid_cluster = !any(isnan.(Plist_tmp)) # if the cluster has any nans, the whole cluster is discarded
-            valid_period_scale = false
-            max_attempts_period_scale = 100
-            attempts_period_scale = 0
-            while !valid_period_scale && attempts_period_scale<max_attempts_period_scale && valid_cluster
-                attempts_period_scale += 1
+        #if attempts_period_scale > 1
+            #println("attempts_period_scale: ", attempts_period_scale)
+        #end
 
-                period_scale::Array{Float64,1} = draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)
-                # NOTE: this ensures that the minimum and maximum periods will be in the range [min_period, max_period]
-                # WARNING: not sure about the behaviour when min_period/minimum(Plist_tmp) > max_period/maximum(Plist_tmp) (i.e. when the cluster cannot fit in the given range)?
-                # TODO OPT: could draw period_scale more efficiently by computing the allowed regions in [min_period, max_period] given the previous cluster draws (difficult)
-
-                Plist[pl_start:pl_stop] = Plist_tmp .* period_scale
-
-                if test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param)
-                    valid_period_scale = true
-                end
-            end  # while !valid_period_scale...
-
-            #if attempts_period_scale > 1
-                #println("attempts_period_scale: ", attempts_period_scale)
-            #end
-
-            if !valid_period_scale
-                Plist[pl_start:pl_stop] .= NaN
-            end
-            =#
-
-            num_pl_in_cluster_true[c] = sum(.!isnan.(Plist[pl_start:pl_stop]))
-            pl_start += n
-        end # for c in 1:num_clusters
-
-        isnanPlist::Array{Bool,1} = isnan.(Plist::Array{Float64,1})
-        if any(isnanPlist)  # if any loop failed to generate valid planets, it should set a NaN in the period list
-            keep::Array{Bool,1} = .!(isnanPlist) # currently, keeping clusters that could be fit, rather than throwing out entire systems and starting from scratch
-            num_pl = sum(keep)
-            clusteridlist = clusteridlist[keep]
-            Plist = Plist[keep]
-            Rlist = Rlist[keep]
-            masslist = masslist[keep]
-            ecclist = ecclist[keep]
-            omegalist = omegalist[keep]
-            ascnodelist = ascnodelist[keep]
-            meananomlist = meananomlist[keep]
-            inclmutlist = inclmutlist[keep]
-            incllist = incllist[keep]
-            AMDlist = AMDlist[keep]
+        if !valid_period_scale
+            Plist[pl_start:pl_stop] .= NaN
         end
+        =#
 
-        # Now compute the critical AMD for the system and distribute it between the planets (to draw eccentricities and inclinations):
-        idx = sortperm(Plist)
-        μlist = masslist[idx] ./ star.mass # mass ratios
-        alist = map(P -> semimajor_axis(P, star.mass), Plist[idx])
-        AMDlist, ecclist, omegalist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; check_stability=false)
+        num_pl_in_cluster_true[c] = sum(.!isnan.(Plist[pl_start:pl_stop]))
+        pl_start += n
+    end # for c in 1:num_clusters
 
-        valid_system = false
+    # Discard failed planets and sort the remaining planets by period:
 
-        #println("P: ", Plist)
-        #println("R: ", Rlist)
-        #println("M: ", masslist)
-        #println("ecc: ", ecclist)
-        #println("omega: ", omegalist)
+    isnanPlist::Array{Bool,1} = isnan.(Plist::Array{Float64,1})
+    if any(isnanPlist) # if any loop failed to generate valid planets, it should set a NaN in the period list
+        keep::Array{Bool,1} = .!(isnanPlist) # currently, keeping clusters that could be fit, rather than throwing out entire systems and starting from scratch
+        num_pl = sum(keep)
 
-        # NOTE: this would be for drawing each cluster separately and then accepting or rejecting the whole lot. By testing for stability before adding each cluster, this last test should be unnecessary.
-        if length(Plist) > 0
-            if test_stability(Plist, masslist, star.mass, sim_param; ecc=ecclist)
-                valid_system = true
-            else
-                println("Warning: re-attempting system because it fails stability test even though its clusters each pass the test.")
-                # NOTE: this should never happen because we check for stability before adding each cluster, and unstable additions are set to NaN and then discarded
-            end
-        else
-            valid_system = true # this else statement is to allow for systems with no planets to pass
-        end
-
-        attempts_system += 1
-    end # while !valid_system...
-
-    if attempts_system > 1
-        println("attempts_system: ", attempts_system)
+        clusteridlist = clusteridlist[keep]
+        Plist = Plist[keep]
+        Rlist = Rlist[keep]
+        masslist = masslist[keep]
     end
 
-    # To print out periods, radii, and masses (for troubleshooting):
-    #=
-    i_sort = sortperm(Plist)
-    Plist_sorted = sort(Plist)
-    if length(Plist) > 1
-        ratio_list = Plist_sorted[2:end]./Plist_sorted[1:end-1]
-        if minimum(ratio_list) < 1.1
-            println("P: ", Plist_sorted)
-            println(Rlist[i_sort])
-            println(masslist[i_sort])
-            println(ecclist[i_sort])
-            println(omegalist[i_sort])
-        end
-    end
+    idx = sortperm(Plist)
+    Plist = Plist[idx]
+    Rlist = Rlist[idx]
+    masslist = masslist[idx]
+
+    # Now compute the critical AMD for the system and distribute it between the planets (to draw eccentricities and inclinations):
+
+    ecclist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    ωlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    Ωlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    meananomlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    inclmutlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    incllist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    AMDlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+
+    μlist = masslist ./ star.mass # mass ratios
+    alist = map(P -> semimajor_axis(P, star.mass), Plist)
+    AMDlist, ecclist, ωlist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; check_stability=false)
+
+    Ωlist, meananomlist = 2π .* rand(num_pl), 2π .* rand(num_pl)
+    incllist = acos.(cos(incl_sys) .* cos.(inclmutlist) .+ sin(incl_sys) .* sin.(inclmutlist) .* cos.(Ωlist))
+
+    #= For debugging:
+    println("P (d): ", Plist)
+    println("R (R⊕): ", Rlist ./ ExoplanetsSysSim.earth_radius)
+    println("M (M⊕): ", masslist ./ ExoplanetsSysSim.earth_mass)
+    println("e: ", ecclist)
+    println("ω (deg): ", ωlist .* 180/π)
+    println("i_m (deg): ", inclmutlist .* 180/π)
+    println("i (deg): ", incllist .* 180/π)
+    println("AMD: ", AMDlist)
     =#
+
+    # Final checks and returning the system:
+
+    if num_pl==0 # failed to draw any planets for the system
+        return PlanetarySystem(star)
+    else
+        # This final mutual-Hill stability test should be unnecessary if the period scales were drawn properly
+        # NOTE: NOT including eccentricities in final mutual-Hill stability test since they were drawn by distributing AMD after the periods were set
+        @assert(test_stability(Plist, masslist, star.mass, sim_param))
+    end
 
     pl = Array{Planet}(undef, num_pl)
     orbit = Array{Orbit}(undef, num_pl)
-    idx = sortperm(Plist) # TODO OPT: Check to see if sorting is significant time sink. If so, could reduce redundant sortperm
     for i in 1:num_pl
-        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], inclmutlist[idx[i]], incllist[idx[i]], omegalist[idx[i]], ascnodelist[idx[i]], meananomlist[idx[i]])
-        pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]], clusteridlist[idx[i]])
+        pl[i] = Planet(Rlist[i], masslist[i], clusteridlist[i])
+        orbit[i] = Orbit(Plist[i], ecclist[i], inclmutlist[i], incllist[i], ωlist[i], Ωlist[i], meananomlist[i])
     end
 
     return PlanetarySystem(star, pl, orbit)
