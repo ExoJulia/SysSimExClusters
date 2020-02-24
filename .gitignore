@@ -9,3 +9,4 @@ libcorbits.so
 profile*
 examples/*.out
 examples/*.csv
+emulator/GP_files
