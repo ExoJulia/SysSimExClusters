@@ -26,14 +26,14 @@ max_incl_sys = 0.
 dists_include_split = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 dists_include_all = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 
-data_table = CSV.read("../emulator/GP_files/Active_params_distances_table_best100000_every10.txt", delim=" ")
+data_table = CSV.read("../emulator/GP_files/Active_params_distances_table_best100000_every10.txt", delim=" ", allowmissing=:none)
 n_params = length(make_vector_of_active_param_keys(sim_param))
 params_keys = names(data_table)[1:n_params]
 @assert all(make_vector_of_active_param_keys(sim_param) .== String.(params_keys))
 
 params_array = convert(Matrix, data_table[1:end, params_keys])
 
-file_name = model_name*"_recompute_optim_best100000_every10_targs$(num_targs).txt"
+file_name = model_name*"_recompute_optim_best100000_every10_targs$(num_targs)"
 
 sendto(workers(), num_targs=num_targs, max_incl_sys=max_incl_sys, file_name=file_name)
 
