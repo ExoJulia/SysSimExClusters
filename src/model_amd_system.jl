@@ -180,7 +180,14 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         idx = .!isnan.(Plist[1:pl_stop-n])
         idy = .!isnan.(Plist_tmp)
         if any(idy)
-            period_scale = draw_periodscale_power_law_allowed_regions_mutualHill(num_pl_in_cluster_true[1:c-1], Plist[1:pl_stop-n][idx], masslist[1:pl_stop-n][idx], Plist_tmp[idy], masslist_tmp[idy], star.mass, sim_param; x0=min_period/minimum(Plist_tmp[idy]), x1=max_period/maximum(Plist_tmp[idy]), α=power_law_P)
+            min_period_scale::Float64 = min_period/minimum(Plist_tmp[idy])
+            max_period_scale::Float64 = max_period/maximum(Plist_tmp[idy])
+
+            if min_period_scale < max_period_scale
+                period_scale = draw_periodscale_power_law_allowed_regions_mutualHill(num_pl_in_cluster_true[1:c-1], Plist[1:pl_stop-n][idx], masslist[1:pl_stop-n][idx], Plist_tmp[idy], masslist_tmp[idy], star.mass, sim_param; x0=min_period_scale, x1=max_period_scale, α=power_law_P)
+            else # cluster cannot fit at all
+                period_scale = NaN
+            end
         else # void cluster; all NaNs
             period_scale = NaN
         end
@@ -198,11 +205,12 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         valid_period_scale = false
         max_attempts_period_scale = 100
         attempts_period_scale = 0
+        min_period_scale::Float64 = min_period/minimum(Plist_tmp)
+        max_period_scale::Float64 = max_period/maximum(Plist_tmp)
         while !valid_period_scale && attempts_period_scale<max_attempts_period_scale && valid_cluster
             attempts_period_scale += 1
 
-            period_scale::Array{Float64,1} = draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)
-            # NOTE: this ensures that the minimum and maximum periods will be in the range [min_period, max_period]
+            period_scale::Array{Float64,1} = draw_power_law(power_law_P, min_period_scale, max_period_scale, 1)
 
             Plist[pl_start:pl_stop] = Plist_tmp .* period_scale
 
@@ -235,6 +243,11 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         Plist = Plist[keep]
         Rlist = Rlist[keep]
         masslist = masslist[keep]
+    end
+
+    # Return the system (star) early if failed to draw any planets:
+    if num_pl==0
+        return PlanetarySystem(star)
     end
 
     idx = sortperm(Plist)
@@ -272,13 +285,9 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
 
     # Final checks and returning the system:
 
-    if num_pl==0 # failed to draw any planets for the system
-        return PlanetarySystem(star)
-    else
-        # This final mutual-Hill stability test should be unnecessary if the period scales were drawn properly
-        # NOTE: NOT including eccentricities in final mutual-Hill stability test since they were drawn by distributing AMD after the periods were set
-        @assert(test_stability(Plist, masslist, star.mass, sim_param))
-    end
+    # This final mutual-Hill stability test should be unnecessary if the period scales were drawn properly
+    # NOTE: NOT including eccentricities in final mutual-Hill stability test since they were drawn by distributing AMD after the periods were set
+    @assert(test_stability(Plist, masslist, star.mass, sim_param))
 
     pl = Array{Planet}(undef, num_pl)
     orbit = Array{Orbit}(undef, num_pl)

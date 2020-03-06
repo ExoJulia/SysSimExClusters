@@ -237,7 +237,14 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             idx = .!isnan.(Plist[1:pl_stop-n])
             idy = .!isnan.(Plist_tmp)
             if any(idy)
-                period_scale = draw_periodscale_power_law_allowed_regions_mutualHill(num_pl_in_cluster_true[1:c-1], Plist[1:pl_stop-n][idx], masslist[1:pl_stop-n][idx], Plist_tmp[idy], masslist_tmp[idy], star.mass, sim_param; x0=min_period/minimum(Plist_tmp[idy]), x1=max_period/maximum(Plist_tmp[idy]), α=power_law_P, ecc_cl=ecclist[1:pl_stop-n][idx], insert_cl_ecc=ecclist_tmp[idy])
+                min_period_scale::Float64 = min_period/minimum(Plist_tmp[idy])
+                max_period_scale::Float64 = max_period/maximum(Plist_tmp[idy])
+
+                if min_period_scale < max_period_scale
+                    period_scale = draw_periodscale_power_law_allowed_regions_mutualHill(num_pl_in_cluster_true[1:c-1], Plist[1:pl_stop-n][idx], masslist[1:pl_stop-n][idx], Plist_tmp[idy], masslist_tmp[idy], star.mass, sim_param; x0=min_period_scale, x1=max_period_scale, α=power_law_P, ecc_cl=ecclist[1:pl_stop-n][idx], insert_cl_ecc=ecclist_tmp[idy])
+                else # cluster cannot fit at all
+                    period_scale = NaN
+                end
             else # void cluster; all NaNs
                 period_scale = NaN
             end
