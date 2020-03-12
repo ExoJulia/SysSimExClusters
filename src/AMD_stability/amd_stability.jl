@@ -555,9 +555,10 @@ function distribute_AMD_planet_ecc_incl_random(AMD::Real, μ::Real, a::Real)
     # Randomly assign x^2, y^2, z^2 such that their sum equals sumsq_xyz:
     split = sort(Random.rand(2))
     xsq, ysq, zsq = [split[1], split[2]-split[1], 1-split[2]] .* sumsq_xyz
+    x, y = sign(randn())*sqrt(xsq), sign(randn())*sqrt(ysq)
 
     e = sqrt(xsq + ysq) # eccentricity
-    ω = asin(sqrt(xsq)/e) # argument of pericenter
+    ω = atan(x, y) # argument of pericenter
     i = asin(sqrt(zsq)) # inclination relative to invariant plane (rad)
     @assert(sqrt(1 - e^2)*cos(i) >= 1 - AMD/Λ) # NOTE: I expected this to be equal given how we assigned x^2+y^2+z^2 = (AMD/Λ)*(2 - AMD/Λ), but in practice it is >= (which does not break AMD stability since this implies the true AMD given (e,i) is less than the AMD provided)
     #@info("e = $e, ω = $(ω*180/π) deg, i = $(i*180/π) deg")
