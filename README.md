@@ -1,10 +1,10 @@
 # SysSimExClusters
 
-This repository provides a comprehensive forward modelling framework for studying planetary systems using the Kepler planet candidates.
+This repository provides a comprehensive forward modelling framework for studying planetary systems.
 
 <center><img src="/best_models/Clustered_P_R_observed.gif" alt="Best fit clustered models" width="800"/></center>  
 
-We develop and provide several statistical models for describing the intrinsic planetary systems, their architectures, and the correlations within multi-planet systems. Our specific models are described in the following papers:
+We develop and provide several *statistical* models for describing the intrinsic planetary systems, their architectures, and the correlations within multi-planet systems, using the Kepler population of exoplanet candidates. Our specific models are described in the following papers:
 
 * He, Ford, and Ragozzine (2019) (Paper I): \[published in [MNRAS](https://doi.org/10.1093/mnras/stz2869)\] \[[arXiv](https://arxiv.org/abs/1907.07773)\]
 * He, Ford, and Ragozzine (2020) (Paper II): \[submitted to MNRAS\] \[[arXiv](https://arxiv.org/abs/2003.04348)\]
@@ -13,7 +13,7 @@ We develop and provide several statistical models for describing the intrinsic p
 
 
 
-## How to use our models for studying exoplanetary system populations:
+## How do I use these models?
 
 We provide a large set of simulated catalogs from our models in the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder. If you simply wish to use these simulated catalogs as examples of our models, then no installation is required! Simply download any of these tables and use them for your own science. To be able to use them, you must understand that we provide two types of catalogs:
 
@@ -24,7 +24,7 @@ Refer to the README of the branch specific to each paper for complete details on
 
 
 
-## How to simulate catalogs (physical and observed) on your own:
+## How do I simulated my own (physical and observed) catalogs?
 
 ### Installation:
 
@@ -44,9 +44,9 @@ Refer to the README of the branch containing the model you want to simulate from
 
 
 
-## If you wish to make similar plots as those included in our paper:
+## How do I make plots similar to those in the papers?
 
-While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (3.7) code that was written by Matthias He. We provide these Python scripts in the "plotting/" directory but do not fully maintain or document them yet.
+While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (3.7) code that was written by Matthias He. We provide these Python scripts in the "plotting/" directory but do not fully maintain or document them yet...
 
 
 
