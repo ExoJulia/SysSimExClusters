@@ -6,8 +6,8 @@ This repository provides a comprehensive forward modelling framework for studyin
 
 We develop and provide several statistical models for describing the intrinsic planetary systems, their architectures, and the correlations within multi-planet systems. Our specific models are described in the following papers:
 
-* He, Ford, and Ragozzine (2019) (Paper I): \[published in [MNRAS](https://doi.org/10.1093/mnras/stz2869)\] \[[arXiv](https://arxiv.org/abs/1907.07773))\]
-* He, Ford, and Ragozzine (2020) (Paper II): \[submitted to MNRAS\] \[[arXiv](https://arxiv.org/abs/2003.04348))\]
+* He, Ford, and Ragozzine (2019) (Paper I): \[published in [MNRAS](https://doi.org/10.1093/mnras/stz2869)\] \[[arXiv](https://arxiv.org/abs/1907.07773)\]
+* He, Ford, and Ragozzine (2020) (Paper II): \[submitted to MNRAS\] \[[arXiv](https://arxiv.org/abs/2003.04348)\]
 
 **Important:** We have a separate code branch for each paper (e.g. see "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020"); these should be used if you want to run our code instead of the master branch, which is actively updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
 
