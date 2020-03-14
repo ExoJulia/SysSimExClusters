@@ -9,7 +9,7 @@ We develop and provide several *statistical* models for describing the intrinsic
 * He, Ford, and Ragozzine (2019) (Paper I): \[published in [MNRAS](https://doi.org/10.1093/mnras/stz2869)\] \[[arXiv](https://arxiv.org/abs/1907.07773)\]
 * He, Ford, and Ragozzine (2020) (Paper II): \[submitted to MNRAS\] \[[arXiv](https://arxiv.org/abs/2003.04348)\]
 
-**Important:** We have a separate code branch for each paper (e.g. see "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020"); these should be used if you want to run our code instead of the master branch, which is actively updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
+**Important:** We have a separate code branch for each paper (e.g. "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020"); these should be used if you want to run our code instead of the master branch, which is actively being updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
 
 
 
@@ -24,7 +24,7 @@ Refer to the README of the branch specific to each paper for complete details on
 
 
 
-## How do I simulated my own (physical and observed) catalogs?
+## How do I simulate my own (physical and observed) catalogs?
 
 ### Installation:
 
