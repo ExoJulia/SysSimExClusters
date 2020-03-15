@@ -7,7 +7,7 @@ He, Ford, and Ragozzine (2020) (Paper II): \[submitted to MNRAS\] \[[arXiv](http
 ## To download simulated catalogs from our models:
 
 * Go to the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder.
-* Navigate into "He_Ford_Ragozzine_2020/", then into the "Clustered_P_R_fswp_bprp/"\*, and then into either the KS or AD subdirectories. (Use KS if you don't know the difference or have trouble deciding.) 
+* Navigate into "He_Ford_Ragozzine_2020/", then into "Clustered_P_R_fswp_bprp/"\*, and then into either the KS or AD subdirectories. (Use KS if you don't know the difference or have trouble deciding.) 
 * Download a "physical_catalogX.csv" file (X = an index/number) for a table including all the physical planets in a simulated catalog.
 
 | target_id | star_id | planet_mass    | planet_radius | clusterid | period     | ecc      | incl_mut  | star_mass      | star_radius |
