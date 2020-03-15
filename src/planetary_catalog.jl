@@ -7,6 +7,7 @@ using Dates
 sim_param = setup_sim_param_model()
 
 include("misc_functions.jl")
+include("complexity_stats.jl")
 
 
 
@@ -69,7 +70,10 @@ function keep_planet_candidates_given_sim_param(planet_catalog::DataFrame; sim_p
 
     planets_keep = planets_keep[(planets_keep[:koi_period] .> get_real(sim_param,"min_period")) .& (planets_keep[:koi_period] .< get_real(sim_param,"max_period")), :] # to make additional cuts in period P to be comparable to our simulated sample
     planets_keep = planets_keep[(planets_keep[:koi_prad] .> get_real(sim_param,"min_radius")/ExoplanetsSysSim.earth_radius) .& (planets_keep[:koi_prad] .< get_real(sim_param,"max_radius")/ExoplanetsSysSim.earth_radius) .& (.~ismissing.(planets_keep[:koi_prad])), :] # to make additional cuts in planetary radii to be comparable to our simulated sample
+    planets_keep[:koi_period] = collect(skipmissing(planets_keep[:koi_period]))
+    planets_keep[:koi_prad] = collect(skipmissing(planets_keep[:koi_prad]))
     println("After applying our period and radius cuts (final count): ", size(planets_keep, 1))
+
     return planets_keep
 end
 
@@ -117,6 +121,11 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
     depth_ratios_above = Float64[] # list for the transit depth ratios, both above the boundary
     depth_ratios_below = Float64[] # list for the transit depth ratios, both below the boundary
     depth_ratios_across = Float64[] # list tfor the transit depth ratios, across the boundary
+
+    # System level metrics taken from or inspired by Gilbert & Fabrycky (2020):
+    radii_partitioning = Float64[]
+    radii_monotonicity = Float64[]
+    gap_complexity = Float64[]
 
     for i in 1:length(KOI_systems)
         if checked_bools[i] == 0 # if the KOI has not been checked (included while looking at another planet in the same system)
@@ -183,6 +192,15 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
                     append!(depth_ratios_below, depratio)
                 end
             end
+
+            # To compute system level metrics taken from or inspired by Gilbert & Fabrycky (2020):
+            if length(system_radii) >= 2
+                append!(radii_partitioning, partitioning(system_radii))
+                append!(radii_monotonicity, monotonicity_GF2020(system_radii))
+            end
+            if length(system_P) >= 3
+                append!(gap_complexity, gap_complexity_GF2020(system_P))
+            end
         end
     end
 
@@ -207,6 +225,9 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
     stat["radius_ratios_above"] = sqrt.(depth_ratios_above)
     stat["radius_ratios_below"] = sqrt.(depth_ratios_below)
     stat["radius_ratios_across"] = sqrt.(depth_ratios_across)
+    stat["radii_partitioning"] = radii_partitioning
+    stat["radii_monotonicity"] = radii_monotonicity
+    stat["gap_complexity"] = gap_complexity
 
     return CatalogSummaryStatistics(stat, Dict{String,Any}())
 end
