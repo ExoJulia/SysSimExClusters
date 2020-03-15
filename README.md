@@ -7,14 +7,14 @@ He, Ford, and Ragozzine (2019) (Paper I): \[published in [MNRAS](https://doi.org
 ## To download simulated catalogs from our models:
 
 * Go to the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder.
-* Navigate into the "He_Ford_Ragozzine_2019/" directory, then into the "Clustered_P_R/"\* directory, and then into either the KS or AD subdirectories. (Use KS if you don't know the difference or have trouble deciding.) 
+* Navigate into "He_Ford_Ragozzine_2019/", then into "Clustered_P_R/"\*, and then into either the KS or AD subdirectories. (Use KS if you don't know the difference or have trouble deciding.) 
 * Download a "physical_catalogX.csv" file (X = an index/number) for a table including all the physical planets in a simulated catalog.
 
-| target_id | star_id | planet_mass    | planet_radius | clusterid | period     | ecc      | star_mass |
-|-----------|---------|----------------|---------------|-----------|------------|----------|-----------|
-|           |         | (solar masses) | (solar radii) |           | (days)     |          | (solar masses) |
-| 1.0       | 17593.0 | 3.3830e-7      | 0.0061        | 1.0       | 159.0465   | 0.0107   | 0.992     |
-| ...       | ...     | ...            | ...           | ...       | ...        | ...      | ...       |
+| target_id | star_id | planet_mass    | planet_radius | clusterid | period     | ecc      | star_mass      | star_radius |
+|-----------|---------|----------------|---------------|-----------|------------|----------|----------------|-------------|
+|           |         | (solar masses) | (solar radii) |           | (days)     |          | (solar masses) | (solar radii) |
+| 1.0       | 17593.0 | 3.3830e-7      | 0.0061        | 1.0       | 159.0465   | 0.0107   | 0.992          | 0.985       |
+| ...       | ...     | ...            | ...           | ...       | ...        | ...      | ...            | ...         |
 
 * Download an "observed_catalogX.csv" file (X = an index/number) for a table including all the observed planets that a simulated Kepler mission would detect given the true planetary systems listed in "physical_catalogX.csv".
 
@@ -26,7 +26,11 @@ He, Ford, and Ragozzine (2019) (Paper I): \[published in [MNRAS](https://doi.org
 
 In each of these files, the header contains all the parameters of the model used to generate that catalog.
 
-For each planet (row), "**target_id**" refers to the index of the star in the simulation (e.g. 1 for the first star in the simulation), "**star_id**" refers to the index of the star based on where it is in the input stellar catalog (i.e. the row number in the "q1_q17_dr25_gaia_fgk_cleaned.csv" catalog, which can be found in the "plotting/" directory), and "**clusterid**" is a cluster identifier (i.e., which "cluster" in the system the planet belongs to). Note that indexing starts at 1 in Julia. Stars without any planets are not included in these tables.
+For each planet (row),
+* **target_id** refers to the index of the star in the simulation (e.g. 1 for the first star in the simulation) the planet orbits,
+* **star_id** refers to the index of the star based on where it is in the input stellar catalog (i.e. the row number in the "q1_q17_dr25_gaia_fgk_cleaned.csv" catalog, which can be found in the "plotting/" directory), and
+* **clusterid** is a cluster identifier (i.e., which "cluster" in the system the planet belongs to).
+Note that indexing starts at 1 in Julia. Stars without any planets are not included in these tables.
 
 \*Note: We also provide simulated catalogs from two other models, "Clustered_P" and "Non_Clustered", in their respective subdirectories. These models are also described in the paper linked above but we do not recommend using these models for science as they are not as good of a description of the data as our "Clustered_P_R" model.
 
