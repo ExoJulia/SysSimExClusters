@@ -1,8 +1,14 @@
 #=
 Date:   June 15, 2019
 Author: Daniel Carrera (dcarrera@gmail.com)
+Modified by: Matthias Yang He
+
+Based on:
+Laskar & Petit (2017): https://arxiv.org/pdf/1703.07125.pdf
+Petit, Laskar, & Boue (2017): https://www.aanda.org/articles/aa/pdf/2017/11/aa31196-17.pdf
 =#
-using Printf
+
+using Random
 
 ##################################################
 #
@@ -243,46 +249,114 @@ OUTPUT 2:
 		This is ∞ for :MMR_circular and Cx/min(C_coll,C_mmr) otherwise.
 """
 function AMD_stability(μ1::Real,μ2::Real,a1::Real,a2::Real,Cx::Real)
-	#
 	# Convention: 1 == inner planet; 2 == outer planet.
-	#
 	@assert(a1 <= a2)
+
 	γ = μ1/μ2
 	α = a1/a2
-	ϵ = μ1+μ2   # Equation  4 of Petit & Laskar (2017).
-	r = 0.80199 # Equation 28 of Petit & Laskar (2017).
-	#
-	# Equantion 76 and Section 3.6 of Petit & Laskar (2017).
-	#
-	α_crit = 1 - 1.46 * ϵ^(2/7)
+	ϵ = μ1+μ2 # Equation 4 of Petit, Laskar, & Boue 2017
+
+    # Equation 76 and Section 3.6 of Petit, Laskar, & Boue 2017:
+	α_crit = 1 - 1.46*ϵ^(2/7)
 	if α > α_crit
 		return :MMR_circular, Inf
 	end
-	#
-	# Relative AMD fron collision condition (Laskar & Petit 2017).
-	#
-	e1 = critical_eccentricity(γ,α)
-	e2 = 1 - α - α*e1
-	@assert(a1*(1 + e1) ≈ a2*(1 - e2))
-	sqrtα = sqrt(α)
-	C_coll = γ*sqrtα*(1 - sqrt((1-e1)*(1+e1)) + 1 - sqrt((1-e2)*(1+e2)))
-	#
-	# Relative AMD fron MMR overlap condition (Petit & Laskar 2017).
-	#
-	g = 3^4 * (1 - α)^5 / (2^9 * r * ϵ) - 32r * ϵ / (9*(1 - α)^2)
-	C_mmr = g^2 * γ*sqrtα / (2 + 2γ*sqrtα)
-	#
-	# Final result.
-	#
-	ratio = Cx/min(C_coll,C_mmr)
-	if Cx < min(C_coll,C_mmr)
-		return :Stable,ratio
+
+    # Relative AMD from collision condition (Laskar & Petit 2017):
+    C_coll = relative_AMD_collision(μ1, μ2, a1, a2)
+
+    # Relative AMD from MMR overlap condition (Petit, Laskar, & Boue 2017):
+	C_mmr = relative_AMD_MMR_overlap(μ1, μ2, a1, a2)
+
+    # Final result:
+    C_crit = min(C_coll, C_mmr)
+	ratio = Cx/C_crit
+	if Cx < C_crit
+		return :Stable, ratio
 	elseif C_coll < C_mmr
-		return :Collision,ratio
+		return :Collision, ratio
 	else
-		return :MMR_eccentric,ratio
+		return :MMR_eccentric, ratio
 	end
 end
+
+"""
+    relative_AMD_collision(μ1, μ2, a1, a2)
+
+Compute the critical (minimum) relative AMD for collision, based on Equations 29 & 39 in Laskar & Petit (2017).
+
+# Arguments:
+- `μ1::Real`: planet/star mass ratio of inner planet.
+- `μ2::Real`: planet/star mass ratio of outer planet.
+- `a1::Real`: semimajor axis of inner planet.
+- `a2::Real`: semimajor axis of outer planet.
+
+# Returns:
+- `C_coll::Float64`: critical relative AMD for collision.
+"""
+function relative_AMD_collision(μ1::Real, μ2::Real, a1::Real, a2::Real)
+    @assert(a1 <= a2)
+
+    γ = μ1/μ2
+    α = a1/a2
+
+    e1 = critical_eccentricity(γ,α)
+    e2 = 1 - α - α*e1
+    @assert(a1*(1 + e1) ≈ a2*(1 - e2))
+    C_coll = γ*sqrt(α)*(1 - sqrt((1-e1)*(1+e1)) + 1 - sqrt((1-e2)*(1+e2)))
+    return C_coll
+end
+
+"""
+    relative_AMD_MMR_overlap(μ1, μ2, a1, a2)
+
+Compute the critical (minimum) relative AMD for MMR overlap, based on Equation 74 in Petit, Laskar, & Boue (2017).
+
+# Arguments:
+- `μ1::Real`: planet/star mass ratio of inner planet.
+- `μ2::Real`: planet/star mass ratio of outer planet.
+- `a1::Real`: semimajor axis of inner planet.
+- `a2::Real`: semimajor axis of outer planet.
+
+# Returns:
+- `C_mmr::Float64`: critical relative AMD for MMR overlap.
+"""
+function relative_AMD_MMR_overlap(μ1::Real, μ2::Real, a1::Real, a2::Real)
+    @assert(a1 <= a2)
+
+    γ = μ1/μ2
+    α = a1/a2
+    ϵ = μ1+μ2
+    r = 0.80199 # Equation 28 of Petit, Laskar, & Boue (2017)
+
+    g = ((3^4*(1-α)^5) / (2^9*r*ϵ)) - ((32*r*ϵ) / (9*(1-α)^2))
+    C_mmr = (g^2*γ*sqrt(α)) / (2+2γ*sqrt(α))
+    return C_mmr
+end
+
+"""
+    critical_relative_AMD(μ1, μ2, a1, a2)
+
+Compute the critical (minimum) relative AMD for collision or MMR overlap.
+
+# Arguments:
+- `μ1::Real`: planet/star mass ratio of inner planet.
+- `μ2::Real`: planet/star mass ratio of outer planet.
+- `a1::Real`: semimajor axis of inner planet.
+- `a2::Real`: semimajor axis of outer planet.
+
+# Returns:
+The minimum of the relative AMD for collision and for MMR overlap.
+"""
+function critical_relative_AMD(μ1::Real, μ2::Real, a1::Real, a2::Real)
+    @assert(a1 <= a2)
+
+    C_coll = relative_AMD_collision(μ1, μ2, a1, a2)
+    C_mmr = relative_AMD_MMR_overlap(μ1, μ2, a1, a2)
+    return min(C_coll, C_mmr)
+end
+
+
 
 """
 Determines the AMD stability of a planetary system using the
@@ -361,6 +435,7 @@ function AMD_stability(μ::Array{T}, a::Array{T}, e::Array{T},
 	
 	for k in 2:N
 		Cx = AMD / Λ[k]
+        #@info("k = $k; Cx = $Cx")
 		stat,ratio = AMD_stability(μ[k-1],μ[k],a[k-1],a[k],Cx)
 		#
 		# Track the results.
@@ -370,4 +445,171 @@ function AMD_stability(μ::Array{T}, a::Array{T}, e::Array{T},
 		push!(ratios,ratio)
 	end
 	return stats,pairs,ratios
+end
+
+
+
+"""
+    critical_AMD_system(μ, a)
+
+Compute the critical AMD for a system to be stable.
+
+# Arguments:
+- `μ::Vector{T}`: list of planet/star mass ratios.
+- `a::Vector{T}`: list of semimajor axes.
+Note: μ and a must be sorted from innermost to outermost.
+
+# Returns:
+The minimum of the critical AMD for each pair of planets (including the star-planet1 pair). Any greater AMD value for the system would render it AMD-unstable.
+"""
+function critical_AMD_system(μ::Vector{T}, a::Vector{T}) where T <: Real
+    # As above, we define μ = m/Mstar and set G*Mstar = 1
+
+    N = length(μ)
+    @assert(length(a) == N)
+
+    Λ = μ .* sqrt.(a) # angular momentum of circular orbits
+
+    # Compute the critical AMD for each pair of planets:
+    # AMD_crit_pairs[1] = Λ[1] is simply the star-planet 1 pair
+    # AMD_crit_pairs[k] = Λ[k]*min(C_coll, C_mmr) for k=2,...,N (each (k-1,k) planet pair)
+    AMD_crit_pairs = deepcopy(Λ)
+    for k in 2:N
+        AMD_crit_pairs[k] *= critical_relative_AMD(μ[k-1], μ[k], a[k-1], a[k])
+    end
+    return minimum(AMD_crit_pairs)
+end
+
+
+
+
+
+"""
+    distribute_AMD_planets_equal(AMD_tot, N)
+
+Distribute a total AMD amount equally amongst the planets in the system.
+
+# Arguments:
+- `AMD_tot::Real`: total AMD of the system.
+- `N::Integer`: number of planets in the system.
+
+# Returns:
+- `AMD::Vector{Real}`: list of AMD per planet.
+"""
+function distribute_AMD_planets_equal(AMD_tot::Real, N::Integer)
+    AMD = (AMD_tot/N) .* ones(N)
+    return AMD
+end
+
+"""
+    distribute_AMD_planets_per_mass(AMD_tot, μ)
+
+Distribute a total AMD amount amongst the planets in the system, equally per unit mass.
+
+# Arguments:
+- `AMD_tot::Real`: total AMD of the system.
+- `μ::Vector{T}`: planet/star mass ratios (can also be planet masses).
+
+# Returns:
+- `AMD::Vector{Real}`: list of AMD per planet.
+"""
+function distribute_AMD_planets_per_mass(AMD_tot::Real, μ::Vector{T}) where T <: Real
+    N = length(μ)
+    AMD = (AMD_tot/sum(μ)) .* μ
+    return AMD
+end
+
+# Distribute a total AMD amount amongst the planets in the system:
+function distribute_AMD_planets(AMD_tot::Real, μ::Vector{T}) where T <: Real
+    #AMD = distribute_AMD_planets_equal(AMD_tot, length(μ))
+    AMD = distribute_AMD_planets_per_mass(AMD_tot, μ)
+    return AMD
+end
+
+
+
+"""
+    distribute_AMD_planet_ecc_incl_random(AMD, μ, a)
+
+Distribute the AMD of a planet amongst its eccentricity and inclination components randomly (sin(i), e*sin(w), and e*cos(w)).
+
+# Arguments:
+- `AMD::Real`: AMD assigned to the planet.
+- `μ::Real`: planet/star mass ratio.
+- `a::Real`: semimajor axis of the planet.
+
+# Returns:
+- `e::Real`: orbital eccentricity.
+- `ω::Real`: argument of pericenter (rad).
+- `i::Real`: inclination (rad) relative to invariant plane.
+"""
+function distribute_AMD_planet_ecc_incl_random(AMD::Real, μ::Real, a::Real)
+    # Let x = e*sin(w), y = e*cos(w), z = sin(i)
+    # Thus e = sqrt(x^2 + y^2) and i = asin(z)
+
+    Λ = μ*sqrt(a) # angular momentum of circular orbit
+    @assert(AMD <= Λ) # too much AMD if AMD >= Λ (planet can collide with star)
+    # NOTE: allowing AMD = Λ for case of a single planet, where the critical AMD is Λ
+    sumsq_xyz = (AMD/Λ)*(2 - AMD/Λ) # x^2+y^2+z^2, related to the total AMD
+
+    # Randomly assign x^2, y^2, z^2 such that their sum equals sumsq_xyz:
+    split = sort(Random.rand(2))
+    xsq, ysq, zsq = [split[1], split[2]-split[1], 1-split[2]] .* sumsq_xyz
+
+    e = sqrt(xsq + ysq) # eccentricity
+    ω = asin(sqrt(xsq)/e) # argument of pericenter
+    i = asin(sqrt(zsq)) # inclination relative to invariant plane (rad)
+    @assert(sqrt(1 - e^2)*cos(i) >= 1 - AMD/Λ) # NOTE: I expected this to be equal given how we assigned x^2+y^2+z^2 = (AMD/Λ)*(2 - AMD/Λ), but in practice it is >= (which does not break AMD stability since this implies the true AMD given (e,i) is less than the AMD provided)
+    #@info("e = $e, ω = $(ω*180/π) deg, i = $(i*180/π) deg")
+
+    return e, ω, i
+end
+
+# Distribute the AMD of a planet amongst its eccentricity and inclination:
+function distribute_AMD_planet_ecc_incl(AMD::Real, μ::Real, a::Real)
+    e, ω, i = distribute_AMD_planet_ecc_incl_random(AMD, μ, a)
+    return e, ω, i
+end
+
+
+
+"""
+    draw_ecc_incl_system_critical_AMD(μ, a; check_stability=false)
+
+Draw eccentricities and inclinations for the planets in a system by distributing the critical AMD of the system.
+
+# Arguments:
+- `μ::Vector{T}`: list of planet/star mass ratios.
+- `a::Vector{T}`: list of semimajor axes.
+- `check_stability::Bool=false`: whether to double check (if true) or not (if false) that the system is AMD-stable.
+NOTE 1: μ and a must be sorted from innermost to outermost.
+NOTE 2: by definition, the system should ALWAYS be AMD-stable if drawn using this function. Thus the `check_stability` flag is more of a debugging/testing tool.
+
+# Returns:
+- `AMD::Vector{Real}`: list of AMD assigned to the planets.
+- `e::Vector{Float64}`: list of eccentricities drawn for the planets.
+- `ω::Vector{Float64}`: list of arguments of pericenter (rad) drawn for the planets.
+- `i::Vector{Float64}`: list of inclinations (rad) relative to the invariant plane drawn for the planets.
+"""
+function draw_ecc_incl_system_critical_AMD(μ::Vector{T}, a::Vector{T}; check_stability::Bool=false) where T <: Real
+    N = length(μ)
+    @assert(length(a) == N)
+
+    AMD_tot = critical_AMD_system(μ, a) # total (critical) AMD of system
+    AMD = distribute_AMD_planets(AMD_tot, μ) # list of AMD distributed to each planet
+
+    e = Vector{Float64}(undef, N)
+    ω = Vector{Float64}(undef, N)
+    i = Vector{Float64}(undef, N)
+    for n in 1:N
+        e[n], ω[n], i[n] = distribute_AMD_planet_ecc_incl(AMD[n], μ[n], a[n])
+    end
+
+    # To double check that the system is AMD stable given the drawn e and i:
+    if check_stability
+        stats, pairs, ratios = AMD_stability(μ, a, e, i)
+        @assert(all(stats .== :Stable))
+    end
+
+    return AMD, e, ω, i
 end

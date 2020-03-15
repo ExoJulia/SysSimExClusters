@@ -10,9 +10,8 @@ using Optim
 
 
 function load_data(dims::Int64, data_path::String)
-    data_table_original = CSV.read(joinpath(data_path,"Active_params_distances_table_best100000_every10.txt"), delim=" ", allowmissing=:none)
-    data_table_recomputed = CSV.read(joinpath(data_path,"Active_params_distances_recomputed_table_best100000_every10.txt"), delim=" ", comment="#", allowmissing=:none)
-    #data_table_recomputed = CSV.read("GP_files/Active_params_distances_table_best388529_every1.txt", delim=" ", allowmissing=:none)[1:388000,:]
+    data_table_original = CSV.read(joinpath(data_path,"Active_params_distances_table_best100000_every10.txt"), delim=" ")
+    data_table_recomputed = CSV.read(joinpath(data_path,"Active_params_recomputed_distances_table_best100000_every10.txt"), delim=" ", comment="#")
 
     params_names = names(data_table_recomputed)[1:dims]
     dists_names = names(data_table_recomputed)[dims+1:end]
@@ -24,7 +23,7 @@ function load_data(dims::Int64, data_path::String)
     dist_array = convert(Array, data_table_recomputed[1:end, :dist_tot_weighted])
 
     # If we want to transform some parameters by sum and difference:
-    transform_sum_diff_params!(params_names, params_array, 2, 3)
+    transform_sum_diff_params!(params_names, params_array, 4, 5) #####
 
     data = Dict()
     data[:params_names] = params_names
@@ -214,30 +213,27 @@ prior_bounds = nothing
 
 
 
-# Clustered_P_R:
-#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Clustered_P_R/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some11_params_CRPDr_AD/Fixed_Rbreak3_Ncrit8/lc_0p2_5_lp_0p5_10_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90_sigmaR_0_0p5_sigmaP_0_0p3/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/AD_mod/GP_files"
+# Clustered_P_R_fswp:
+#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Split_stars/Clustered_P_R_fswp/Params12_AD/durations_AD/GP_files"
 
 # Transformed:
-#hparams_best = [1., 0.2, 0.6, 1., 1., 0.8, 1.5, 0.02, 30., 1., 0.15, 0.1]
-#prior_bounds = [(0.1, 0.7), (0., 2.2), (-1., 3.), (-1., 2.), (-3., 1.), (-6., -2.), (0., 0.05), (0., 90.), (0., 3.), (0.1, 0.5), (0.1, 0.3)]
+#hparams_best = [2.7, 0.2, 0.2, 0.4, 1., 1., 1., 1.5, 0.02, 30., 1., 0.2, 0.1]
+#prior_bounds = [(0.1, 0.7), (0.3, 0.9), (0.5, 2.5), (-1., 2.), (-0.8, 1.2), (-2.5, -0.5), (-6., -3.), (0., 0.04), (0., 90.), (0., 2.4), (0.1, 0.5), (0.1, 0.3)]
 
 
 
-# Clustered_P:
-#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Clustered_P/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some10_params_CRPDr_AD/Fixed_Rbreak3_Ncrit8/lc_0p2_5_lp_0p5_10_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90_sigmaP_0_0p3/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/AD_mod/GP_files"
+# Clustered_P_R_fswp_bprp:
+#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Split_stars/Clustered_P_R_fswp_bprp/Params13_AD/durations_AD/GP_files"
 
 # Transformed:
-#hparams_best = [1., 0.2, 0.6, 1., 0.8, 1., 1., 0.02, 30., 1., 0.1]
-#prior_bounds = [(0.1, 0.7), (0., 2.), (0., 3.), (-1., 1.5), (-2., 1.), (-6., -3.), (0., 0.04), (0., 90.), (0., 2.5), (0.1, 0.3)]
+#hparams_best = [2.7, 0.2, 0.2, 0.6, 0.4, 1., 1., 1., 1.5, 0.02, 30., 1., 0.2, 0.1]
+#prior_bounds = [(0.1, 0.7), (0.3, 0.9), (0., 1.), (0.5, 2.5), (-1., 2.), (-0.8, 1.2), (-2.5, -0.5), (-6., -3.), (0., 0.04), (0., 90.), (0., 2.4), (0.1, 0.5), (0.1, 0.3)]
 
 
 
-# Non_Clustered:
-#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Julia_v0.7/Kepler_catalog_optimization/q1q17_dr25_gaia_fgk_stars79935/Non_Clustered/f_high_incl_low_incl_mmr/Fit_rate_mult_P_Pratios_D_Dratios_dur_durratios_mmr/Some8_params_CRPDr_KS/Fixed_Rbreak3_Ncrit8/lc_1_8_alphaP_-2_2_alphaR1_-4_2_alphaR2_-6_0_ecc_0_0p1_incl_inclmmr_0_90/targs79935_maxincl0_maxiters5000/sigma_i_greater_sigma_i_mmr/GP_files"
-#hparams_best = [1., 0.05, 0.3, 0.2, 0.5, 1., 0.01, 30., 0.25]
-#prior_bounds = [(0., 0.15), (0.7, 1.9), (-0.5, 0.3), (-2., 0.), (-6., -4.), (0., 0.03), (0., 90.), (0., 0.7)]
 
 
-
-dims = 11
-GP_model = train_GP_emulator(; dims=dims, data_path=data_path, f_err=0.8, n_train=2000, n_cv=2000, mean_f=75., kernel=kernel_SE_ndims, hparams_best=hparams_best, optimize_hparams=false, make_plots=false)
+dims = 13
+mean_f = 75. # KS
+#mean_f = 150. # AD
+GP_model = train_GP_emulator(; dims=dims, data_path=data_path, f_err=2.7, n_train=2000, n_cv=2000, mean_f=mean_f, kernel=kernel_SE_ndims, hparams_best=hparams_best, optimize_hparams=false, make_plots=false)

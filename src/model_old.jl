@@ -20,11 +20,27 @@ min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
 end
 =#
 
-function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_param::SimParam; n::Int64=1) where {StarT<:StarAbstract}  # TODO: IMPORTANT: Make this function work and test before using for science
-    @assert n>=1
+function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_param::SimParam; n::Int64=1) where {StarT<:StarAbstract}
+    @assert(n >= 1)
     generate_planet_mass_from_radius = get_function(sim_param, "generate_planet_mass_from_radius")
     generate_sizes = get_function(sim_param, "generate_sizes")
     generate_e_omega = get_function(sim_param, "generate_e_omega")
+
+    # To include a dependence on stellar color for the eccentricity scale:
+    #=
+    global stellar_catalog
+    star_color = stellar_catalog[:bp_rp][star.id]
+    sigma_ecc_color_slope = get_real(sim_param, "sigma_hk_color_slope")
+    sigma_ecc_at_med_color = get_real(sim_param, "sigma_hk_at_med_color")
+    med_color = get_real(sim_param, "med_color")
+    @assert(0 <= sigma_ecc_at_med_color <= 1)
+
+    sigma_ecc = sigma_ecc_color_slope*(star_color - med_color) + sigma_ecc_at_med_color
+    sigma_ecc = min(sigma_ecc, 0.3) # WARNING: hardcoding a max cut-off for sigma_ecc
+    sigma_ecc = max(sigma_ecc, 0.)
+    @assert(0 <= sigma_ecc <= 0.3)
+    =#
+
     sigma_ecc::Float64 = haskey(sim_param, "sigma_hk") ? get_real(sim_param, "sigma_hk") : 0.0
 
     if n==1
@@ -134,23 +150,25 @@ end
 function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)  # TODO: Make this function work and test before using for science
 
     # To include a dependence on stellar color for the fraction of stars with planets:
+    #
     global stellar_catalog
     star_color = stellar_catalog[:bp_rp][star.id]
     f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
     f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
     med_color = get_real(sim_param, "med_color")
-    @assert 0<=f_stars_with_planets_attempted_at_med_color<=1
+    @assert(0 <= f_stars_with_planets_attempted_at_med_color <= 1)
 
     f_stars_with_planets_attempted = f_stars_with_planets_attempted_color_slope*(star_color - med_color) + f_stars_with_planets_attempted_at_med_color
     f_stars_with_planets_attempted = min(f_stars_with_planets_attempted, 1.)
     f_stars_with_planets_attempted = max(f_stars_with_planets_attempted, 0.)
-    @assert 0<=f_stars_with_planets_attempted<=1
+    @assert(0 <= f_stars_with_planets_attempted <= 1)
+    #
 
     # Load functions to use for drawing parameters:
     #=
     if haskey(sim_param, "f_stars_with_planets_attempted")
         f_stars_with_planets_attempted = get_real(sim_param, "f_stars_with_planets_attempted")
-        @assert 0<=f_stars_with_planets_attempted<=1
+        @assert(0 <= f_stars_with_planets_attempted <= 1)
     else
         f_stars_with_planets_attempted = 1.
     end
@@ -158,8 +176,11 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     generate_num_clusters = get_function(sim_param, "generate_num_clusters")
     generate_num_planets_in_cluster = get_function(sim_param, "generate_num_planets_in_cluster")
     power_law_P = get_real(sim_param, "power_law_P")
+    #power_law_P1 = get_real(sim_param, "power_law_P1")
+    #power_law_P2 = get_real(sim_param, "power_law_P2")
     min_period = get_real(sim_param, "min_period")
     max_period = get_real(sim_param, "max_period")
+    #break_period = get_real(sim_param, "break_period")
 
     # Decide whether to assign a planetary system to the star at all:
     if rand() > f_stars_with_planets_attempted
@@ -193,7 +214,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         ecclist::Array{Float64,1} = Array{Float64}(undef, num_pl)
         omegalist::Array{Float64,1} = Array{Float64}(undef, num_pl)
 
-        @assert num_pl_in_cluster[1] >= 1
+        @assert(num_pl_in_cluster[1] >= 1)
         pl_start = 1
         pl_stop = 0
         for c in 1:num_clusters
@@ -232,7 +253,21 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             while !valid_period_scale && attempt_period_scale<max_attempts_period_scale && valid_cluster
                 attempt_period_scale += 1
 
-                period_scale::Float64 = draw_power_law(power_law_P, min_period/minimum(Plist_tmp), max_period/maximum(Plist_tmp), 1)[1]
+                min_period_scale::Float64 = min_period/minimum(Plist_tmp)
+                max_period_scale::Float64 = max_period/maximum(Plist_tmp)
+                period_scale::Float64 = draw_power_law(power_law_P, min_period_scale, max_period_scale, 1)[1]
+
+                #=
+                @assert(min_period_scale <= max_period_scale)
+                if min_period_scale >= break_period
+                    period_scale = draw_power_law(power_law_P2, min_period_scale, max_period_scale, 1)[1]
+                elseif max_period_scale <= break_period
+                    period_scale = draw_power_law(power_law_P1, min_period_scale, max_period_scale, 1)[1]
+                else
+                    period_scale = ExoplanetsSysSim.draw_broken_power_law(power_law_P1, power_law_P2, min_period_scale, max_period_scale, break_period, 1)[1]
+                end
+                =#
+
                 #Note: this ensures that the minimum and maximum periods will be in the range [min_period, max_period]
                 #Warning: not sure about the behaviour when min_period/minimum(Plist_tmp) > max_period/maximum(Plist_tmp) (i.e. when the cluster cannot fit in the given range)?
                 #TODO OPT: could draw period_scale more efficiently by computing the allowed regions in [min_period, max_period] given the previous cluster draws
@@ -342,7 +377,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         asc_node = 2pi*rand()
         mean_anom = 2pi*rand()
         incl = incl_mut!=zero(incl_mut) ? acos(cos(incl_sys)*cos(incl_mut) + sin(incl_sys)*sin(incl_mut)*cos(asc_node)) : incl_sys
-        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], incl, omegalist[idx[i]], asc_node, mean_anom)
+        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], incl_mut, incl, omegalist[idx[i]], asc_node, mean_anom)
         pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]], clusteridlist[idx[i]])
     end # for i in 1:num_pl
 
@@ -470,7 +505,7 @@ function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::
         asc_node = 2pi*rand()
         mean_anom = 2pi*rand()
         incl = incl_mut!=zero(incl_mut) ? acos(cos(incl_sys)*cos(incl_mut) + sin(incl_sys)*sin(incl_mut)*cos(asc_node)) : incl_sys
-        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], incl, omegalist[idx[i]], asc_node, mean_anom)
+        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], incl_mut, incl, omegalist[idx[i]], asc_node, mean_anom)
         pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]])
     end # for i in 1:num_pl
 
