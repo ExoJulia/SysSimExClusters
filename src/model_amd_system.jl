@@ -45,7 +45,7 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam; n::Int64=1) w
 
     # Draw unscaled periods first, checking for mutual Hill separation stability assuming circular and coplanar orbits
 
-    # New sampling:
+    #= New sampling:
     P = zeros(n)
     for i in 1:n # Draw periods one at a time
         if any(isnan.(P))
@@ -57,9 +57,9 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam; n::Int64=1) w
     end
     found_good_periods = all(isnan.(P)) ? false : true
     @assert(test_stability(P, mass, star.mass, sim_param)) # should always be true if our unscaled period draws are correct
-    #
+    =#
 
-    #= Old rejection sampling:
+    # Old rejection sampling:
     found_good_periods = false # will be true if entire cluster is likely to be stable assuming circular and coplanar orbits (given sizes/masses and periods)
     max_attempts = 100
     attempts_periods = 0
@@ -70,7 +70,7 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam; n::Int64=1) w
             found_good_periods = true
         end
     end # while trying to draw periods
-    =#
+    #
 
     return (P, R, mass) # NOTE: can also return earlier if only one planet in cluster; also, the planets are NOT sorted at this point
 end
@@ -133,19 +133,23 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     min_period = get_real(sim_param, "min_period")
     max_period = get_real(sim_param, "max_period")
 
-    max_incl_sys = get_real(sim_param, "max_incl_sys")
-
     # Decide whether to assign a planetary system to the star at all:
     if rand() > f_stars_with_planets_attempted
         #println("Star not assigned a planetary system.")
         return PlanetarySystem(star)
     end
 
-    # Assign a reference plane (inclination of invariant plane) for the system:
-    incl_sys = acos(cos(max_incl_sys*pi/180)*rand()) # acos(rand()) for isotropic distribution of system inclinations; acos(cos(X*pi/180)*rand()) gives angles from X (deg) to 90 (deg)
+    # Assign a reference (invariant) plane for the system:
+    # NOTE: aligning sky plane to x-y plane (z-axis is unit normal)
+
+    vec_z = [0.,0.,1.]
+
+    vec_sys = draw_random_normal_vector() # unit normal of reference plane
+    incl_sys = calc_angle_between_vectors(vec_z, vec_sys) # inclination of reference plane (rad) relative to sky plane
+    Ω_sys = calc_Ω_in_sky_plane(vec_sys) # argument of ascending node of reference plane (rad) relative to sky plane
 
     # Generate a set of periods, planet radii, and planet masses:
-    local num_pl, clusteridlist, Plist, Rlist, masslist, ecclist, ωlist, Ωlist, meananomlist, inclmutlist, incllist
+    local num_pl, clusteridlist, Plist, Rlist, masslist, ecclist, ωlist, Ωlist, meananomlist, inclmutlist, inclskylist, Ωskylist
 
     # First, generate number of clusters (to attempt) and planets (to attempt) in each cluster:
     num_clusters = generate_num_clusters(star, sim_param)::Int64
@@ -176,7 +180,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         clusteridlist[pl_start:pl_stop] = ones(Int64, num_pl_in_cluster[c])*c
         Rlist[pl_start:pl_stop], masslist[pl_start:pl_stop] = Rlist_tmp, masslist_tmp
 
-        # New sampling:
+        #= New sampling:
         idx = .!isnan.(Plist[1:pl_stop-n])
         idy = .!isnan.(Plist_tmp)
         if any(idy)
@@ -198,9 +202,9 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             break
         end
         @assert(test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param)) # should always be true if our period scale draws are correct
-        #
+        =#
 
-        #= Old rejection sampling:
+        # Old rejection sampling:
         valid_cluster = !any(isnan.(Plist_tmp)) # if the cluster has any nans, the whole cluster is discarded
         valid_period_scale = false
         max_attempts_period_scale = 100
@@ -226,7 +230,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         if !valid_period_scale
             Plist[pl_start:pl_stop] .= NaN
         end
-        =#
+        #
 
         num_pl_in_cluster_true[c] = sum(.!isnan.(Plist[pl_start:pl_stop]))
         pl_start += n
@@ -262,15 +266,19 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     Ωlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
     meananomlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
     inclmutlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
-    incllist::Array{Float64,1} = Array{Float64}(undef, num_pl)
     AMDlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
 
     μlist = masslist ./ star.mass # mass ratios
     alist = map(P -> semimajor_axis(P, star.mass), Plist)
     AMDlist, ecclist, ωlist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; check_stability=false)
 
-    Ωlist, meananomlist = 2π .* rand(num_pl), 2π .* rand(num_pl)
-    incllist = acos.(cos(incl_sys) .* cos.(inclmutlist) .+ sin(incl_sys) .* sin.(inclmutlist) .* cos.(Ωlist))
+    Ωlist, meananomlist = 2π .* rand(num_pl), 2π .* rand(num_pl) # relative to the reference plane
+
+    # Calculate the sky orientations of each orbit:
+    inclskylist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+    Ωskylist::Array{Float64,1} = Array{Float64}(undef, num_pl)
+
+    inclskylist, Ωskylist = calc_sky_incl_Ω_orbits_given_system_vector(inclmutlist, Ωlist, vec_sys)
 
     #= For debugging:
     println("P (d): ", Plist)
@@ -279,7 +287,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     println("e: ", ecclist)
     println("ω (deg): ", ωlist .* 180/π)
     println("i_m (deg): ", inclmutlist .* 180/π)
-    println("i (deg): ", incllist .* 180/π)
+    println("i (deg): ", inclskylist .* 180/π)
     println("AMD: ", AMDlist)
     =#
 
@@ -293,8 +301,9 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     orbit = Array{Orbit}(undef, num_pl)
     for i in 1:num_pl
         pl[i] = Planet(Rlist[i], masslist[i], clusteridlist[i])
-        orbit[i] = Orbit(Plist[i], ecclist[i], inclmutlist[i], incllist[i], ωlist[i], Ωlist[i], meananomlist[i])
+        orbit[i] = Orbit(Plist[i], ecclist[i], inclskylist[i], ωlist[i], Ωskylist[i], meananomlist[i])
     end
+    sys_ref_plane = SystemPlane(incl_sys, Ω_sys)
 
-    return PlanetarySystem(star, pl, orbit)
+    return PlanetarySystem(star, pl, orbit, sys_ref_plane)
 end
