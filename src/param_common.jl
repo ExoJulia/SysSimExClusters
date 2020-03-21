@@ -53,11 +53,11 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     # Generate_num_planets_in_cluster currently use these for the inclination distribution:
     add_param_fixed(sim_param,"resonance_width", 0.05)
     add_param_fixed(sim_param,"period_ratios_mmr", [2.0, 1.5, 4/3, 5/4])
-    add_param_active(sim_param,"f_high_incl", 0.4) # fraction of systems with higher mutual inclinations
-    add_param_active(sim_param,"sigma_incl", 50.) # degrees; 0 = coplanar w/ generate_kepler_target_simple; ignored by generate_planetary_system_uncorrelated_incl
-    add_param_active(sim_param,"sigma_incl_near_mmr", 1.3)
+    #add_param_active(sim_param,"f_high_incl", 0.4) # fraction of systems with higher mutual inclinations
+    #add_param_active(sim_param,"sigma_incl", 50.) # degrees; 0 = coplanar w/ generate_kepler_target_simple; ignored by generate_planetary_system_uncorrelated_incl
+    #add_param_active(sim_param,"sigma_incl_near_mmr", 1.3)
 
-    add_param_fixed(sim_param,"max_incl_sys", 0.0) # degrees; gives system inclinations from "max_incl_sys" (deg) to 90 (deg), so set to 0 for isotropic distribution of system inclinations; NOTE: make sure the difference between this and 90 (deg) is at least greater than "sigma_incl" and "sigma_incl_near_mmr"!
+    #add_param_fixed(sim_param,"max_incl_sys", 0.0) # degrees; gives system inclinations from "max_incl_sys" (deg) to 90 (deg), so set to 0 for isotropic distribution of system inclinations; NOTE: make sure the difference between this and 90 (deg) is at least greater than "sigma_incl" and "sigma_incl_near_mmr"!
 
     # Generate_num_planets_in_cluster currently use these for the eccentricity distribution:
     add_param_fixed(sim_param,"generate_e_omega", ExoplanetsSysSim.generate_e_omega_rayleigh)
@@ -66,7 +66,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_active(sim_param,"sigma_hk", 0.018)
 
     # Generate_num_planets_in_cluster currently use these for the stability tests:
-    add_param_fixed(sim_param,"num_mutual_hill_radii", 8.0)
+    add_param_active(sim_param,"num_mutual_hill_radii", 8.0)
     add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table) # "ExoplanetsSysSim.generate_planet_mass_from_radius_powerlaw" or "generate_planet_mass_from_radius_Ning2018" or "generate_planet_mass_from_radius_Ning2018_table"
     add_param_active(sim_param,"sigma_log_radius_in_cluster", 0.3)
     add_param_active(sim_param,"sigma_logperiod_per_pl_in_cluster", 0.2)

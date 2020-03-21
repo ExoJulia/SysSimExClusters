@@ -1,6 +1,7 @@
 dir_path = dirname(@__FILE__)
 
 include(joinpath(dir_path, "../src/clusters.jl"))
+include(joinpath(dir_path, "../src/planetary_catalog.jl"))
 
 sim_param = setup_sim_param_model()
 add_param_fixed(sim_param,"num_targets_sim_pass_one", 79935*5)

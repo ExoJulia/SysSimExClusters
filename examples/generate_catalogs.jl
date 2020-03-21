@@ -1,6 +1,7 @@
 dir_path = dirname(@__FILE__)
 
 include(joinpath(dir_path, "../src/clusters.jl"))
+include(joinpath(dir_path, "../src/planetary_catalog.jl"))
 
 ##### To generate one physical and observed catalog:
 
