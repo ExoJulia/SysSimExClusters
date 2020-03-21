@@ -350,14 +350,22 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     # Now assign orbits with given periods, sizes, and masses.
     sigma_incl = deg2rad(get_real(sim_param, "sigma_incl"))
     sigma_incl_near_mmr = deg2rad(get_real(sim_param, "sigma_incl_near_mmr"))
-    max_incl_sys = get_real(sim_param, "max_incl_sys")
     f_high_incl = get_real(sim_param, "f_high_incl")
 
     sigma_incl_use = rand() < f_high_incl ? max(sigma_incl, sigma_incl_near_mmr) : min(sigma_incl, sigma_incl_near_mmr)
 
+    # Assign a reference (invariant) plane for the system:
+    # NOTE: aligning sky plane to x-y plane (z-axis is unit normal)
+    vec_z = [0.,0.,1.]
+
+    vec_sys = draw_random_normal_vector() # unit normal of reference plane
+    incl_sys = calc_angle_between_vectors(vec_z, vec_sys) # inclination of reference plane (rad) relative to sky plane
+    Ω_sys = calc_Ω_in_sky_plane(vec_sys) # argument of ascending node of reference plane (rad) relative to sky plane
+
+    sys_ref_plane = SystemPlane(incl_sys, Ω_sys)
+
     pl = Array{Planet}(undef, num_pl)
     orbit = Array{Orbit}(undef, num_pl)
-    incl_sys = acos(cos(max_incl_sys*pi/180)*rand()) #acos(rand()) for isotropic distribution of system inclinations; acos(cos(X*pi/180)*rand()) gives angles from X (deg) to 90 (deg)
     idx = sortperm(Plist)       # TODO OPT: Check to see if sorting is significant time sink.  If so, could reduce redundant sortperm
     is_near_resonance = calc_if_near_resonance(Plist[idx], sim_param)
     for i in 1:num_pl
@@ -376,12 +384,15 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         #
         asc_node = 2pi*rand()
         mean_anom = 2pi*rand()
-        incl = incl_mut!=zero(incl_mut) ? acos(cos(incl_sys)*cos(incl_mut) + sin(incl_sys)*sin(incl_mut)*cos(asc_node)) : incl_sys
-        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], incl_mut, incl, omegalist[idx[i]], asc_node, mean_anom)
+
+        # Calculate the sky orientations of each orbit:
+        inclsky, Ωsky = calc_sky_incl_Ω_orbits_given_system_vector([incl_mut], [asc_node], vec_sys)
+
+        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], inclsky, omegalist[idx[i]], Ωsky, mean_anom)
         pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]], clusteridlist[idx[i]])
     end # for i in 1:num_pl
 
-    return PlanetarySystem(star, pl, orbit)
+    return PlanetarySystem(star, pl, orbit, sys_ref_plane)
 end
 
 function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)
@@ -478,14 +489,22 @@ function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::
     # Now assign orbits with given periods, sizes, and masses.
     sigma_incl = deg2rad(get_real(sim_param, "sigma_incl"))
     sigma_incl_near_mmr = deg2rad(get_real(sim_param, "sigma_incl_near_mmr"))
-    max_incl_sys = get_real(sim_param, "max_incl_sys")
     f_high_incl = get_real(sim_param, "f_high_incl")
 
     sigma_incl_use = rand() < f_high_incl ? max(sigma_incl, sigma_incl_near_mmr) : min(sigma_incl, sigma_incl_near_mmr)
 
+    # Assign a reference (invariant) plane for the system:
+    # NOTE: aligning sky plane to x-y plane (z-axis is unit normal)
+    vec_z = [0.,0.,1.]
+
+    vec_sys = draw_random_normal_vector() # unit normal of reference plane
+    incl_sys = calc_angle_between_vectors(vec_z, vec_sys) # inclination of reference plane (rad) relative to sky plane
+    Ω_sys = calc_Ω_in_sky_plane(vec_sys) # argument of ascending node of reference plane (rad) relative to sky plane
+
+    sys_ref_plane = SystemPlane(incl_sys, Ω_sys)
+
     pl = Array{Planet}(undef, num_pl)
     orbit = Array{Orbit}(undef, num_pl)
-    incl_sys = acos(cos(max_incl_sys*pi/180)*rand()) #acos(rand()) for isotropic distribution of system inclinations; acos(cos(X*pi/180)*rand()) gives angles from X (deg) to 90 (deg)
     idx = sortperm(Plist)       # TODO OPT: Check to see if sorting is significant time sink.  If so, could reduce redundant sortperm
     is_near_resonance = calc_if_near_resonance(Plist[idx], sim_param)
     for i in 1:num_pl
@@ -504,12 +523,15 @@ function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::
         #
         asc_node = 2pi*rand()
         mean_anom = 2pi*rand()
-        incl = incl_mut!=zero(incl_mut) ? acos(cos(incl_sys)*cos(incl_mut) + sin(incl_sys)*sin(incl_mut)*cos(asc_node)) : incl_sys
-        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], incl_mut, incl, omegalist[idx[i]], asc_node, mean_anom)
+
+        # Calculate the sky orientations of each orbit:
+        inclsky, Ωsky = calc_sky_incl_Ω_orbits_given_system_vector([incl_mut], [asc_node], vec_sys)
+
+        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], inclsky, omegalist[idx[i]], Ωsky, mean_anom)
         pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]])
     end # for i in 1:num_pl
 
-    return PlanetarySystem(star, pl, orbit)
+    return PlanetarySystem(star, pl, orbit, sys_ref_plane)
 end
 
 function test_generate_planetary_system_clustered() # TODO: Update to test to not reply on generate_kepler_physical_catalog
