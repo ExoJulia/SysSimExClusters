@@ -388,7 +388,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         # Calculate the sky orientations of each orbit:
         inclsky, Ωsky = calc_sky_incl_Ω_orbits_given_system_vector([incl_mut], [asc_node], vec_sys)
 
-        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], inclsky, omegalist[idx[i]], Ωsky, mean_anom)
+        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], inclsky[1], omegalist[idx[i]], Ωsky[1], mean_anom)
         pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]], clusteridlist[idx[i]])
     end # for i in 1:num_pl
 
@@ -527,7 +527,7 @@ function generate_planetary_system_non_clustered(star::StarAbstract, sim_param::
         # Calculate the sky orientations of each orbit:
         inclsky, Ωsky = calc_sky_incl_Ω_orbits_given_system_vector([incl_mut], [asc_node], vec_sys)
 
-        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], inclsky, omegalist[idx[i]], Ωsky, mean_anom)
+        orbit[i] = Orbit(Plist[idx[i]], ecclist[idx[i]], inclsky[1], omegalist[idx[i]], Ωsky[1], mean_anom)
         pl[i] = Planet(Rlist[idx[i]], masslist[idx[i]])
     end # for i in 1:num_pl
 
