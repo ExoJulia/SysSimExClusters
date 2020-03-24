@@ -420,6 +420,8 @@ function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStati
     depth_list = zeros(num_tranets)
     duration_list = zeros(num_tranets)
     duration_norm_circ_list = zeros(num_tranets)
+    duration_norm_circ_singles_list = Float64[]
+    duration_norm_circ_multis_list = Float64[]
     #weight_list = ones(num_tranets)
 
     depth_above_list = Float64[] # list to be filled with the transit depths of planets above the photoevaporation boundary in Carrera et al 2018
@@ -436,7 +438,13 @@ function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStati
             period_list[i] = targ.obs[j].period
             depth_list[i] = targ.obs[j].depth
             duration_list[i] = targ.obs[j].duration
-            duration_norm_circ_list[i] = targ.obs[j].duration/calc_transit_duration_central_circ_obs(targ, j)
+            duration_norm_circ = targ.obs[j].duration/calc_transit_duration_central_circ_obs(targ, j)
+            duration_norm_circ_list[i] = duration_norm_circ
+            if length(targ.obs) == 1
+                append!(duration_norm_circ_singles_list, duration_norm_circ)
+            elseif length(targ.obs) > 1
+                append!(duration_norm_circ_multis_list, duration_norm_circ)
+            end
             #weight_list[i] = 1.0
 
             radius_earths, period = (sqrt(targ.obs[j].depth)*targ.star.radius) / ExoplanetsSysSim.earth_radius, targ.obs[j].period
@@ -455,6 +463,8 @@ function calc_summary_stats_cuml_period_depth_duration!(css::CatalogSummaryStati
     css.stat["depths"] = depth_list
     css.stat["durations"] = duration_list
     css.stat["durations_norm_circ"] = duration_norm_circ_list
+    css.stat["durations_norm_circ_singles"] = duration_norm_circ_singles_list
+    css.stat["durations_norm_circ_multis"] = duration_norm_circ_multis_list
     #css.cache["weight list"] = weight_list
 
     css.cache["depths_above"] = depth_above_list
