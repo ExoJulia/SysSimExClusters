@@ -114,6 +114,8 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
     periods = collect(skipmissing(planets_cleaned[:koi_period])) # list of the periods (days)
     durations = collect(skipmissing(planets_cleaned[:koi_duration]./24)) # list of the transit durations (days)
     durations_norm_circ = Float64[] # list for the transit durations normalized by the circular, central durations
+    durations_norm_circ_singles = Float64[]
+    durations_norm_circ_multis = Float64[]
     depths = collect(skipmissing(planets_cleaned[:koi_depth]./(1e6))) # list of the transit depths (fraction)
 
     depths_above = Float64[] # list for the transit depths of planets above the photoevaporation boundary in Carrera et al 2018
@@ -149,6 +151,11 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
 
             system_dur_norm_circ = system_dur ./ map(P -> calc_transit_duration_central_circ_obs(P; Mstar=star_mass, Rstar=star_radius), system_P)
             append!(durations_norm_circ, system_dur_norm_circ)
+            if length(system_dur_norm_circ) == 1
+                append!(durations_norm_circ_singles, system_dur_norm_circ)
+            elseif length(system_dur_norm_circ) > 1
+                append!(durations_norm_circ_multis, system_dur_norm_circ)
+            end
 
             # To count the total number of planets in this system:
             push!(M_obs, length(system_P))
@@ -215,6 +222,8 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
     stat["period_ratios"] = period_ratios
     stat["durations"] = durations
     stat["durations_norm_circ"] = durations_norm_circ
+    stat["durations_norm_circ_singles"] = durations_norm_circ_singles
+    stat["durations_norm_circ_multis"] = durations_norm_circ_multis
     stat["duration_ratios"] = duration_ratios
     stat["duration_ratios_nonmmr"] = duration_ratios_nonmmr
     stat["duration_ratios_mmr"] = duration_ratios_mmr
