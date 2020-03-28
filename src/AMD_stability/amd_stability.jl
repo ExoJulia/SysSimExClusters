@@ -303,7 +303,7 @@ function relative_AMD_collision(μ1::Real, μ2::Real, a1::Real, a2::Real)
     e1 = critical_eccentricity(γ,α)
     e2 = 1 - α - α*e1
     @assert(a1*(1 + e1) ≈ a2*(1 - e2))
-    C_coll = γ*sqrt(α)*(1 - sqrt((1-e1)*(1+e1)) + 1 - sqrt((1-e2)*(1+e2)))
+    C_coll = γ*sqrt(α)*(1 - sqrt((1-e1)*(1+e1))) + (1 - sqrt((1-e2)*(1+e2)))
     return C_coll
 end
 
