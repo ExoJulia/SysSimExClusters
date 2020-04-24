@@ -274,6 +274,10 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
 
     # Now compute the critical AMD for the system and distribute it between the planets (to draw eccentricities and inclinations):
 
+    f_amd_crit = get_real(sim_param, "f_amd_crit")
+    f_amd_crit = f_amd_crit + (1 - f_amd_crit)*rand() # uniform between f_amd_crit and 1
+    @assert(0 <= f_amd_crit <= 1)
+
     ecclist::Array{Float64,1} = Array{Float64}(undef, num_pl)
     ωlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
     Ωlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
@@ -289,7 +293,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         ecc::Float64, ω::Float64 = generate_e_omega(sigma_ecc)
         AMDlist, ecclist, ωlist, inclmutlist = μlist .*sqrt.(alist) .*(1 - sqrt(1 - ecc^2)), [ecc], [ω], [0.]
     else
-        AMDlist, ecclist, ωlist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; check_stability=false)
+        AMDlist, ecclist, ωlist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; f_amd_crit=f_amd_crit, check_stability=false)
     end
 
     Ωlist, meananomlist = 2π .* rand(num_pl), 2π .* rand(num_pl) # relative to the reference plane

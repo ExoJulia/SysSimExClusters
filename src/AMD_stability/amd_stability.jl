@@ -629,13 +629,14 @@ end
 
 
 """
-    draw_ecc_incl_system_critical_AMD(μ, a; check_stability=false)
+    draw_ecc_incl_system_critical_AMD(μ, a; f_amd_crit=1., check_stability=false)
 
 Draw eccentricities and inclinations for the planets in a system by distributing the critical AMD of the system.
 
 # Arguments:
 - `μ::Vector{T}`: list of planet/star mass ratios.
 - `a::Vector{T}`: list of semimajor axes.
+- `f_amd_crit::Float64=1.`: fraction of the critical system AMD to distribute.
 - `check_stability::Bool=false`: whether to double check (if true) or not (if false) that the system is AMD-stable.
 NOTE 1: μ and a must be sorted from innermost to outermost.
 NOTE 2: by definition, the system should ALWAYS be AMD-stable if drawn using this function. Thus the `check_stability` flag is more of a debugging/testing tool.
@@ -646,11 +647,12 @@ NOTE 2: by definition, the system should ALWAYS be AMD-stable if drawn using thi
 - `ω::Vector{Float64}`: list of arguments of pericenter (rad) drawn for the planets.
 - `i::Vector{Float64}`: list of inclinations (rad) relative to the invariant plane drawn for the planets.
 """
-function draw_ecc_incl_system_critical_AMD(μ::Vector{T}, a::Vector{T}; check_stability::Bool=false) where T <: Real
+function draw_ecc_incl_system_critical_AMD(μ::Vector{T}, a::Vector{T}; f_amd_crit::Float64=1., check_stability::Bool=false) where T <: Real
     N = length(μ)
     @assert(length(a) == N)
+    @assert(0 <= f_amd_crit <= 1)
 
-    AMD_tot = critical_AMD_system(μ, a) # total (critical) AMD of system
+    AMD_tot = f_amd_crit*critical_AMD_system(μ, a) # total AMD of system to distribute
     AMD = distribute_AMD_planets(AMD_tot, μ) # list of AMD distributed to each planet
 
     e = Vector{Float64}(undef, N)

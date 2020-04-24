@@ -67,6 +67,8 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
 
     # Generate_num_planets_in_cluster currently use these for the stability tests:
     add_param_active(sim_param,"num_mutual_hill_radii", 8.0)
+    add_param_fixed(sim_param,"f_amd_crit", 1.0) # fraction of critical AMD to distribute
+
     add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table) # "ExoplanetsSysSim.generate_planet_mass_from_radius_powerlaw" or "generate_planet_mass_from_radius_Ning2018" or "generate_planet_mass_from_radius_Ning2018_table"
     add_param_active(sim_param,"sigma_log_radius_in_cluster", 0.3)
     add_param_active(sim_param,"sigma_logperiod_per_pl_in_cluster", 0.2)
@@ -132,13 +134,14 @@ function write_model_params(f, sim_param::SimParam)
     println(f, "# min_radius (R_earth): ", get_real(sim_param,"min_radius")/ExoplanetsSysSim.earth_radius)
     println(f, "# max_radius (R_earth): ", get_real(sim_param,"max_radius")/ExoplanetsSysSim.earth_radius)
 
-    println(f, "# f_high_incl: ", get_real(sim_param,"f_high_incl"))
-    println(f, "# sigma_incl: ", get_real(sim_param,"sigma_incl"))
-    println(f, "# sigma_incl_near_mmr: ", get_real(sim_param,"sigma_incl_near_mmr"))
+    #println(f, "# f_high_incl: ", get_real(sim_param,"f_high_incl"))
+    #println(f, "# sigma_incl: ", get_real(sim_param,"sigma_incl"))
+    #println(f, "# sigma_incl_near_mmr: ", get_real(sim_param,"sigma_incl_near_mmr"))
     println(f, "# sigma_hk: ", get_real(sim_param,"sigma_hk"))
     #println(f, "# sigma_hk_at_med_color: ", get_real(sim_param,"sigma_hk_at_med_color"))
     #println(f, "# sigma_hk_color_slope: ", get_real(sim_param,"sigma_hk_color_slope"))
     println(f, "# num_mutual_hill_radii: ", get_real(sim_param,"num_mutual_hill_radii"))
+    println(f, "# f_amd_crit: ", get_real(sim_param,"f_amd_crit"))
 
     if string(get_function(sim_param,"generate_planet_mass_from_radius")) == "ExoplanetsSysSim.generate_planet_mass_from_radius_powerlaw"
         println(f, "# mr_power_index: ", get_real(sim_param,"mr_power_index"))
