@@ -281,6 +281,60 @@ function AMD_stability(μ1::Real,μ2::Real,a1::Real,a2::Real,Cx::Real)
 end
 
 """
+    test_stability_circular_MMR_overlap(μ1, μ2, a1, a2)
+
+Determines whether a pair of planets passes the MMR overlap condition for circular orbits.
+
+# Arguments:
+- `μ1::Real`: planet/star mass ratio of inner planet.
+- `μ2::Real`: planet/star mass ratio of outer planet.
+- `a1::Real`: semimajor axis of inner planet.
+- `a2::Real`: semimajor axis of outer planet.
+
+# Returns:
+True if the planet pair is stable against MMR overlap for circular orbits; false if not.
+"""
+function test_stability_circular_MMR_overlap(μ1::Real, μ2::Real, a1::Real, a2::Real)
+    @assert(a1 <= a2)
+    α = a1/a2
+    ϵ = μ1+μ2
+    α_crit = 1 - 1.46*ϵ^(2/7)
+    return α < α_crit # if true, pair is stable against circular MMR overlap
+end
+
+"""
+    test_stability_circular_MMR_overlap(μ, a)
+
+Determines whether a planetary system passes the MMR overlap condition for circular orbits.
+
+# Arguments:
+- `μ::Vector{T}`: list of planet/star mass ratios.
+- `a::Vector{T}`: list of semimajor axes.
+Note: `μ` and `a` do not have to be sorted.
+
+# Returns:
+True if the planetary system is stable against MMR overlap for circular orbits; false if not.
+"""
+function test_stability_circular_MMR_overlap(μ::Array{T}, a::Array{T}) where T <: Real
+    @assert(length(μ) == length(a))
+    found_instability = false
+    order = sortperm(a)
+    a2 = a[order[1]]
+    μ2 = μ[order[1]]
+    for i in 1:(length(a)-1)
+        a1 = a2
+        a2 = a[order[i+1]]
+        μ1 = μ2
+        μ2 = μ[order[i+1]]
+        if !test_stability_circular_MMR_overlap(μ1, μ2, a1, a2)
+            found_instability = true
+            break
+        end
+    end
+    return !found_instability
+end
+
+"""
     relative_AMD_collision(μ1, μ2, a1, a2)
 
 Compute the critical (minimum) relative AMD for collision, based on Equations 29 & 39 in Laskar & Petit (2017).

@@ -67,7 +67,14 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam; n::Int64=1) w
         attempts_periods += 1
         P = rand(Pdist, n)
         if test_stability(P, mass, star.mass, sim_param)
-            found_good_periods = true
+            # If pass mutual Hill criteria, also check circular MMR overlap criteria:
+            a = semimajor_axis.(P, mass .+star.mass)
+            μ = mass ./star.mass
+            if test_stability_circular_MMR_overlap(μ, a)
+                found_good_periods = true
+            else
+                @info("Found set of periods passing mutual Hill criteria but not circular MMR overlap criteria.")
+            end
         end
     end # while trying to draw periods
     #
@@ -218,7 +225,14 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             Plist[pl_start:pl_stop] = Plist_tmp .* period_scale
 
             if test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param)
-                valid_period_scale = true
+                # If pass mutual Hill criteria, also check circular MMR overlap criteria:
+                alist = semimajor_axis.(view(Plist,1:pl_stop), view(masslist,1:pl_stop) .+star.mass)
+                μlist = view(masslist,1:pl_stop) ./star.mass
+                if test_stability_circular_MMR_overlap(μlist, alist)
+                    valid_period_scale = true
+                else
+                    @info("Found period scale passing mutual Hill criteria but not circular MMR overlap criteria.")
+                end
             end
         end  # while !valid_period_scale...
 
@@ -269,7 +283,14 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
 
     μlist = masslist ./ star.mass # mass ratios
     alist = map(P -> semimajor_axis(P, star.mass), Plist)
-    AMDlist, ecclist, ωlist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; check_stability=false)
+    if num_pl == 1
+        generate_e_omega = get_function(sim_param, "generate_e_omega")
+        sigma_ecc::Float64 = get_real(sim_param, "sigma_hk")
+        ecc::Float64, ω::Float64 = generate_e_omega(sigma_ecc)
+        AMDlist, ecclist, ωlist, inclmutlist = μlist .*sqrt.(alist) .*(1 - sqrt(1 - ecc^2)), [ecc], [ω], [0.]
+    else
+        AMDlist, ecclist, ωlist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; check_stability=false)
+    end
 
     Ωlist, meananomlist = 2π .* rand(num_pl), 2π .* rand(num_pl) # relative to the reference plane
 
