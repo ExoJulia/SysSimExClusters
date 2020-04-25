@@ -57,7 +57,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     #add_param_active(sim_param,"sigma_incl", 50.) # degrees; 0 = coplanar w/ generate_kepler_target_simple; ignored by generate_planetary_system_uncorrelated_incl
     #add_param_active(sim_param,"sigma_incl_near_mmr", 1.3)
 
-    #add_param_fixed(sim_param,"max_incl_sys", 0.0) # degrees; gives system inclinations from "max_incl_sys" (deg) to 90 (deg), so set to 0 for isotropic distribution of system inclinations; NOTE: make sure the difference between this and 90 (deg) is at least greater than "sigma_incl" and "sigma_incl_near_mmr"!
+    add_param_fixed(sim_param,"max_incl_sys", 0.0) # degrees; gives system inclinations from "max_incl_sys" (deg) to 90 (deg), so set to 0 for isotropic distribution of system inclinations; NOTE: make sure the difference between this and 90 (deg) is at least greater than "sigma_incl" and "sigma_incl_near_mmr"!
 
     # Generate_num_planets_in_cluster currently use these for the eccentricity distribution:
     add_param_fixed(sim_param,"generate_e_omega", ExoplanetsSysSim.generate_e_omega_rayleigh)

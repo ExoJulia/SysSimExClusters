@@ -5,7 +5,7 @@ function write_pbs_settings(f)
     println(f, "#!/bin/tcsh")
     println(f, "#PBS -A ebf11_a_g_sc_default")
     println(f, "#PBS -l nodes=1:ppn=1")
-    println(f, "#PBS -l walltime=36:00:00")
+    println(f, "#PBS -l walltime=72:00:00")
     println(f, "#PBS -l pmem=16gb")
     println(f, "#PBS -j oe")
     #println(f, "#PBS -m abe")
@@ -23,7 +23,7 @@ function generate_pbs_optimize(run_number)
     f_name = "optimize_job_"*string(run_number)*".pbs"
     f = open(f_name, "w")
     write_pbs_settings(f)
-    println(f, "/gpfs/group/ebf11/default/sw/julia-0.7.0/bin/julia optimize.jl "*string(run_number))
+    println(f, "/gpfs/group/ebf11/default/sw/julia-0.7.0/bin/julia optimize_split_stars.jl "*string(run_number))
     close(f)
 
     return f_name
