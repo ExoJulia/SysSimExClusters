@@ -29,7 +29,7 @@ function generate_planet_periods_sizes_masses_eccs_in_cluster(star::StarT, sim_p
     # To include a dependence on stellar color for the eccentricity scale:
     #=
     global stellar_catalog
-    star_color = stellar_catalog[:bp_rp][star.id]
+    star_color = stellar_catalog[:bp_rp][star.id] - stellar_catalog[:e_bp_min_rp_interp][star.id]
     sigma_ecc_color_slope = get_real(sim_param, "sigma_hk_color_slope")
     sigma_ecc_at_med_color = get_real(sim_param, "sigma_hk_at_med_color")
     med_color = get_real(sim_param, "med_color")
@@ -152,7 +152,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     # To include a dependence on stellar color for the fraction of stars with planets:
     #
     global stellar_catalog
-    star_color = stellar_catalog[:bp_rp][star.id]
+    star_color = stellar_catalog[:bp_rp][star.id] - stellar_catalog[:e_bp_min_rp_interp][star.id]
     f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
     f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
     med_color = get_real(sim_param, "med_color")

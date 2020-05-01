@@ -112,7 +112,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     # To include a dependence on stellar color for the fraction of stars with planets:
     #
     global stellar_catalog
-    star_color = stellar_catalog[:bp_rp][star.id]
+    star_color = stellar_catalog[:bp_rp][star.id] - stellar_catalog[:e_bp_min_rp_interp][star.id]
     f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
     f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
     med_color = get_real(sim_param, "med_color")

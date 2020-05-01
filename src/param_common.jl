@@ -9,12 +9,12 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     sim_param = SimParam()
 
     # How many targets to generate:
-    add_param_fixed(sim_param,"num_targets_sim_pass_one", 79935) # Note this is used for the number of stars in the simulations, not necessarily related to number of Kepler targets
-    add_param_fixed(sim_param,"num_kepler_targets", 79935) # Note this is used for the number of Kepler targets for the observational catalog
+    add_param_fixed(sim_param,"num_targets_sim_pass_one", 88912) # Note this is used for the number of stars in the simulations, not necessarily related to number of Kepler targets
+    add_param_fixed(sim_param,"num_kepler_targets", 88912) # Note this is used for the number of Kepler targets for the observational catalog
 
     # For generating target star properties:
     add_param_fixed(sim_param,"star_table_setup", ExoplanetsSysSim.StellarTable.setup_star_table)
-    add_param_fixed(sim_param,"stellar_catalog", "q1q17_dr25_gaia_fgk.jld2")
+    add_param_fixed(sim_param,"stellar_catalog", "q1q17_dr25_gaia_fgk_interpolate_ebprp.jld2")
     add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_from_table)
     add_param_fixed(sim_param,"window_function", "DR25topwinfuncs.jld2")
     add_param_fixed(sim_param,"osd_file","dr25fgk_small_osds.jld2")
@@ -25,7 +25,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
 
     add_param_active(sim_param,"f_stars_with_planets_attempted_color_slope", 0.6)
     add_param_active(sim_param,"f_stars_with_planets_attempted_at_med_color", 0.6)
-    add_param_fixed(sim_param,"med_color", 0.95)
+    add_param_fixed(sim_param,"med_color", 0.81)
     #add_param_active(sim_param,"f_stars_with_planets_attempted", 0.6)
     add_param_fixed(sim_param,"generate_num_clusters", generate_num_clusters_ZTP)
     add_param_fixed(sim_param,"generate_num_planets_in_cluster", generate_num_planets_in_cluster_ZTP)
