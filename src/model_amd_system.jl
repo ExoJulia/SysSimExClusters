@@ -112,7 +112,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     # To include a dependence on stellar color for the fraction of stars with planets:
     #
     global stellar_catalog
-    star_color = stellar_catalog[:bp_rp][star.id] - stellar_catalog[:e_bp_min_rp_interp][star.id]
+    star_color = stellar_catalog[star.id, :bp_rp] - stellar_catalog[star.id, :e_bp_min_rp_interp]
     f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
     f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
     med_color = get_real(sim_param, "med_color")
@@ -225,7 +225,8 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
             Plist[pl_start:pl_stop] = Plist_tmp .* period_scale
 
             if test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param)
-                # If pass mutual Hill criteria, also check circular MMR overlap criteria:
+                valid_period_scale = true
+                #= If pass mutual Hill criteria, also check circular MMR overlap criteria: ##### WARNING: currently bugged (need to ignore NaNs)
                 alist = semimajor_axis.(view(Plist,1:pl_stop), view(masslist,1:pl_stop) .+star.mass)
                 μlist = view(masslist,1:pl_stop) ./star.mass
                 if test_stability_circular_MMR_overlap(μlist, alist)
@@ -233,6 +234,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
                 else
                     @info("Found period scale passing mutual Hill criteria but not circular MMR overlap criteria.")
                 end
+                =#
             end
         end  # while !valid_period_scale...
 
