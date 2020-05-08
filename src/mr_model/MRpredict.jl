@@ -247,7 +247,7 @@ end
 
 ##### To initialize the M-R model parameters:
 
-weights_mle = CSV.read(joinpath(dir_path_MR, "weights.mle.csv"))[:x]
+weights_mle = CSV.read(joinpath(dir_path_MR, "weights.mle.csv"))[!,:x]
 degrees = 55
 
 N_keep = 25

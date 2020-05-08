@@ -1,7 +1,6 @@
 using JLD
 using JLD2
 using FileIO
-using Plots
 using Dates
 
 sim_param = setup_sim_param_model()
@@ -16,7 +15,7 @@ include("complexity_stats.jl")
 ##### To load the DR25 KOI catalog, update the planet radii using Gaia stellar radii, apply the necessary cuts:
 
 #planet_catalog = CSV.read(joinpath(dirname(pathof(ExoplanetsSysSim)), "../data/q1_q17_dr25_koi.csv"), header=157, allowmissing=:all)
-planet_catalog = load(joinpath(dirname(pathof(ExoplanetsSysSim)), "../data/q1_q17_dr25_koi.jld2"))["koi"]
+planet_catalog = load(joinpath(dirname(pathof(ExoplanetsSysSim)), "../data/q1_q17_dr25_koi.jld2"), "koi")
 
 stellar_catalog = ExoplanetsSysSim.StellarTable.setup_star_table(sim_param)
 
@@ -38,12 +37,12 @@ Reduce a planet catalog to a cleaned sample of planets ("confirmed" and "candida
 """
 function keep_planet_candidates_given_sim_param(planet_catalog::DataFrame; sim_param::SimParam, stellar_catalog::DataFrame, recompute_radii::Bool=true)
 
-    planets_keep = planet_catalog[(planet_catalog[:koi_disposition] .== "CONFIRMED") .| (planet_catalog[:koi_disposition] .== "CANDIDATE"), :] # table containing only the confirmed and candidate objects
+    planets_keep = planet_catalog[(planet_catalog[!,:koi_disposition] .== "CONFIRMED") .| (planet_catalog[!,:koi_disposition] .== "CANDIDATE"), :] # table containing only the confirmed and candidate objects
     println("Candidate and confirmed planets: ", size(planets_keep, 1))
 
     in_stellar_catalog = [] # will be filled with booleans indicating whether each koi in 'planets_keep' is found in the 'stellar_catalog' or not
-    for i in 1:length(planets_keep[:kepid])
-        if any(x->x==planets_keep[i,:kepid], stellar_catalog[:kepid])
+    for i in 1:length(planets_keep[!,:kepid])
+        if any(x->x==planets_keep[i,:kepid], stellar_catalog[!,:kepid])
             push!(in_stellar_catalog, true)
         else
             push!(in_stellar_catalog, false)
@@ -54,24 +53,24 @@ function keep_planet_candidates_given_sim_param(planet_catalog::DataFrame; sim_p
     planets_keep = planets_keep[in_stellar_catalog_indices, :]
     println("After removing planets not around stars in stellar catalog: ", size(planets_keep, 1))
 
-    planets_keep = planets_keep[(ismissing.(planets_keep[:koi_duration]) .== false) .& (planets_keep[:koi_duration] .>= 0), :]
-    planets_keep = planets_keep[(ismissing.(planets_keep[:koi_depth]) .== false) .& (planets_keep[:koi_depth] .> 0), :]
+    planets_keep = planets_keep[(ismissing.(planets_keep[!,:koi_duration]) .== false) .& (planets_keep[!,:koi_duration] .>= 0), :]
+    planets_keep = planets_keep[(ismissing.(planets_keep[!,:koi_depth]) .== false) .& (planets_keep[!,:koi_depth] .> 0), :]
     println("After removing planets with missing or negative transit durations or depths: ", size(planets_keep, 1))
 
     if recompute_radii
-        for (i,kepid) in enumerate(planets_keep[:kepid]) # to replace the stellar and planetary radii in 'planets_keep' with the more reliable values as derived from the stellar properties in 'stellar_catalog'
-            stellar_radii_new = stellar_catalog[stellar_catalog[:kepid] .== kepid, :radius][1]
-            stellar_mass = stellar_catalog[stellar_catalog[:kepid] .== kepid, :mass][1]
+        for (i,kepid) in enumerate(planets_keep[!,:kepid]) # to replace the stellar and planetary radii in 'planets_keep' with the more reliable values as derived from the stellar properties in 'stellar_catalog'
+            stellar_radii_new = stellar_catalog[stellar_catalog[!,:kepid] .== kepid, :radius][1]
+            stellar_mass = stellar_catalog[stellar_catalog[!,:kepid] .== kepid, :mass][1]
             planets_keep[i, :koi_srad] = stellar_radii_new
             planets_keep[i, :koi_smass] = stellar_mass # to save stellar masses because for some reason, currently the stellar mass for planets after the first planet in multi-planet systems are set to nan
             planets_keep[i, :koi_prad] = (1 ./ExoplanetsSysSim.earth_radius)*stellar_radii_new*sqrt(planets_keep[i, :koi_depth]/(1e6))
         end
     end
 
-    planets_keep = planets_keep[(planets_keep[:koi_period] .> get_real(sim_param,"min_period")) .& (planets_keep[:koi_period] .< get_real(sim_param,"max_period")), :] # to make additional cuts in period P to be comparable to our simulated sample
-    planets_keep = planets_keep[(planets_keep[:koi_prad] .> get_real(sim_param,"min_radius")/ExoplanetsSysSim.earth_radius) .& (planets_keep[:koi_prad] .< get_real(sim_param,"max_radius")/ExoplanetsSysSim.earth_radius) .& (.~ismissing.(planets_keep[:koi_prad])), :] # to make additional cuts in planetary radii to be comparable to our simulated sample
-    planets_keep[:koi_period] = collect(skipmissing(planets_keep[:koi_period]))
-    planets_keep[:koi_prad] = collect(skipmissing(planets_keep[:koi_prad]))
+    planets_keep = planets_keep[(planets_keep[!,:koi_period] .> get_real(sim_param,"min_period")) .& (planets_keep[!,:koi_period] .< get_real(sim_param,"max_period")), :] # to make additional cuts in period P to be comparable to our simulated sample
+    planets_keep = planets_keep[(planets_keep[!,:koi_prad] .> get_real(sim_param,"min_radius")/ExoplanetsSysSim.earth_radius) .& (planets_keep[!,:koi_prad] .< get_real(sim_param,"max_radius")/ExoplanetsSysSim.earth_radius) .& (.~ismissing.(planets_keep[!,:koi_prad])), :] # to make additional cuts in planetary radii to be comparable to our simulated sample
+    planets_keep[!,:koi_period] = collect(skipmissing(planets_keep[!,:koi_period]))
+    planets_keep[!,:koi_prad] = collect(skipmissing(planets_keep[!,:koi_prad]))
     println("After applying our period and radius cuts (final count): ", size(planets_keep, 1))
 
     return planets_keep
@@ -102,7 +101,7 @@ Compute the summary statistics of a Kepler planet catalog and compile them into 
 A `CatalogSummaryStatistics` object, where the `stat` field is a dictionary containing the summary statistics.
 """
 function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::DataFrame)
-    KOI_systems = [x[1:6] for x in planets_cleaned[:kepoi_name]]
+    KOI_systems = [x[1:6] for x in planets_cleaned[!,:kepoi_name]]
     checked_bools = zeros(size(planets_cleaned,1)) # 0's denote KOI that were not checked yet; 1's denote already checked KOI
 
     M_obs = Int64[] # list for the planet multiplicities of the systems
@@ -111,12 +110,12 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
     duration_ratios_nonmmr = Float64[] # list for the period-normalized transit duration ratios not near any resonances
     duration_ratios_mmr = Float64[] # list for the period-normalized transit duration ratios near a resonance
     depth_ratios = Float64[] # list for the transit depth ratios
-    periods = collect(skipmissing(planets_cleaned[:koi_period])) # list of the periods (days)
-    durations = collect(skipmissing(planets_cleaned[:koi_duration]./24)) # list of the transit durations (days)
+    periods = collect(skipmissing(planets_cleaned[!,:koi_period])) # list of the periods (days)
+    durations = collect(skipmissing(planets_cleaned[!,:koi_duration]./24)) # list of the transit durations (days)
     durations_norm_circ = Float64[] # list for the transit durations normalized by the circular, central durations
     durations_norm_circ_singles = Float64[]
     durations_norm_circ_multis = Float64[]
-    depths = collect(skipmissing(planets_cleaned[:koi_depth]./(1e6))) # list of the transit depths (fraction)
+    depths = collect(skipmissing(planets_cleaned[!,:koi_depth]./(1e6))) # list of the transit depths (fraction)
 
     depths_above = Float64[] # list for the transit depths of planets above the photoevaporation boundary in Carrera et al 2018
     depths_below = Float64[] # list for the transit depths of planets below the boundary
@@ -134,14 +133,14 @@ function calc_summary_stats_Kepler(stellar_catalog::DataFrame, planets_cleaned::
             system_i = (1:length(KOI_systems))[KOI_systems .== KOI_systems[i]]
             checked_bools[system_i] .= 1
 
-            star_radius = planets_cleaned[:koi_srad][system_i][1]
-            star_mass = planets_cleaned[:koi_smass][system_i][1]
+            star_radius = planets_cleaned[!,:koi_srad][system_i][1]
+            star_mass = planets_cleaned[!,:koi_smass][system_i][1]
 
             # To get the periods and transit durations in this system:
-            system_P = planets_cleaned[:koi_period][system_i] # periods of all the planets in this system
-            system_dur = planets_cleaned[:koi_duration][system_i] ./ 24 # transit durations (in days) of all the planets in this system
-            system_dep = planets_cleaned[:koi_depth][system_i] # transit depths (in ppm) of all the planets in this system
-            system_radii = planets_cleaned[:koi_prad][system_i] # radii of all the planets in this system
+            system_P = planets_cleaned[!,:koi_period][system_i] # periods of all the planets in this system
+            system_dur = planets_cleaned[!,:koi_duration][system_i] ./ 24 # transit durations (in days) of all the planets in this system
+            system_dep = planets_cleaned[!,:koi_depth][system_i] # transit depths (in ppm) of all the planets in this system
+            system_radii = planets_cleaned[!,:koi_prad][system_i] # radii of all the planets in this system
 
             system_sort_i = sortperm(system_P) # indices that would sort the periods of the planets in this system
             system_P = system_P[system_sort_i] # periods of all the planets in this system, sorted
