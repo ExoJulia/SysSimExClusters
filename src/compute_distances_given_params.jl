@@ -14,20 +14,24 @@ sim_param = setup_sim_param_model()
 model_name = "Clustered_P_R"
 names_split = ["bluer", "redder"]
 AD_mod = true
-num_targs = 88912
+num_targs = 86760
 max_incl_sys = 0.
 dists_include_split = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 dists_include_all = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 
-data_table = CSV.read("../emulator/GP_files/Active_params_distances_table_best100000_every10.txt", delim=" ")
+data_table = CSV.read("../emulator/GP_files/durations_KS/Active_params_distances_table_best100000_every10.txt", delim=" ", allowmissing=:none)
 n_params = length(make_vector_of_active_param_keys(sim_param))
 params_keys = names(data_table)[1:n_params]
 @assert all(make_vector_of_active_param_keys(sim_param) .== String.(params_keys))
 
 params_array = convert(Matrix, data_table[1:end, params_keys])
 
-file_name = model_name*"_recompute_optim_best100000_every10_targs$(num_targs).txt"
-f = open(file_name, "w")
+run_number, runs = parse(Int64, ARGS[1]), parse(Int64, ARGS[2])
+evals = Int(size(params_array,1)/runs)
+start, stop = 1+(run_number-1)*evals, run_number*evals
+
+file_name = model_name*"_recompute_optim_best100000_every10_evals$(start)to$(stop)_targs$(num_targs).txt"
+f = open("durations_KS/"*file_name, "w")
 println(f, "# All initial parameters:")
 write_model_params(f, sim_param)
 
@@ -80,7 +84,7 @@ println(f, "#")
 Random.seed!()
 
 t_elapsed = @elapsed begin
-    for i in 1:size(params_array,1)
+    for i in start:stop #1:size(params_array,1)
         target_function_split_stars(params_array[i,:], sim_param; cssc_fit=cssck, dists_include_all=dists_include_all, weights_all=weights["all"], names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], weights_samples=weights_split, AD_mod=AD_mod, f=f)
     end
 end
