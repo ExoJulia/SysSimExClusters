@@ -8,7 +8,8 @@ using Optim
 
 dir_path_MR = dirname(@__FILE__)
 
-##### This code is a translation of 'MRpredict.R' at 'https://github.com/Bo-Ning/Predicting-exoplanet-mass-and-radius-relationship/blob/master/MR-predict/MRpredict.R'
+##### This code implements the M-R prediction model of Ning, Wolfgang, and Ghosh (2018) (hereafter NWG-2018)
+##### It is a translation of 'MRpredict.R' at 'https://github.com/Bo-Ning/Predicting-exoplanet-mass-and-radius-relationship/blob/master/MR-predict/MRpredict.R'
 
 struct MR_param_Ning2018
     Mass_min::Float64 #log10 scale
@@ -233,12 +234,12 @@ function interpolate_planet_mass_from_radius_quantile_Ning2018_table(log_Radius:
     return scaled_itp(log_Radius, quantile)
 end
 
-function generate_planet_mass_from_radius_Ning2018_table(Radius::Float64, sim_param::SimParam)
-    Radius_in_earths = Radius/ExoplanetsSysSim.earth_radius
-    log_Radius_in_earths = log10.(Radius_in_earths)
+function generate_planet_mass_from_radius_Ning2018_table(R::Float64, sim_param::SimParam)
+    R_in_earths = R/ExoplanetsSysSim.earth_radius
+    log_R_in_earths = log10(R_in_earths)
     q::Float64 = rand()
-    log_Mass = interpolate_planet_mass_from_radius_quantile_Ning2018_table(log_Radius_in_earths, q)
-    return (10^log_Mass)*ExoplanetsSysSim.earth_mass
+    log_M = interpolate_planet_mass_from_radius_quantile_Ning2018_table(log_R_in_earths, q)
+    return (10^log_M)*ExoplanetsSysSim.earth_mass
 end
 
 
@@ -405,11 +406,131 @@ scaled_itp = Interpolations.scale(itp, log_Radii, quantiles) #scaled interpolati
 
 
 
+##### To draw from an alternate M-R model for small planets (e.g. Li Zeng's model for Earth-like rocky):
+##### https://www.cfa.harvard.edu/~lzeng/planetmodels.html
+##### Will assume a mean density drawn from a normal distribution centered the Earth-like rocky model, with a std that increases towards larger sizes (a linear function for log(σ_ρ) vs. R between the min and max radius for this M-R model)
+
+# Define some useful constants and functions:
+earth_radius_in_cm = ExoplanetsSysSim.earth_radius_eq_in_m_IAU2015 * 100.
+earth_mass_in_g = (ExoplanetsSysSim.G_mass_earth_in_mks / ExoplanetsSysSim.G_in_mks_IAU2015) * 1e3
+
+# Compute mass M (Earth masses) given radius R (Earth radii) and mean density ρ (g/cm^3)
+mass_given_radius_density(R::Float64, ρ::Float64) = ρ * (4π/3) * (R*earth_radius_in_cm)^3 * (1/earth_mass_in_g)
+
+# Compute mean density ρ (g/cm^3) given mass M (Earth masses) and radius R (Earth radii)
+density_given_mass_radius(M::Float64, R::Float64) = (M*earth_mass_in_g) / ((4π/3)*(R*earth_radius_in_cm)^3)
+
+
+
+# To load Li Zeng's M-R tables:
+MR_earthlike_rocky = CSV.read(joinpath(dir_path_MR, "MR_earthlike_rocky.txt"), delim="\t", comment="#", header=["mass","radius"]) # Earth units
+
+# To construct an interpolation function for planet mass as a function of radius:
+using Dierckx
+M_earthlike_rocky_spl = Spline1D(MR_earthlike_rocky[!,"radius"], MR_earthlike_rocky[!,"mass"])
+
+
+
+# To define a function for computing the std in mean density as a function of radius:
+# NOTE: while the following constants could be defined in sim_param, we define them here to prevent users from easily changing them
+radius_switch = 1.472 # Earth radii; where the Earth-like rocky model intersects the mean prediction from NWG-2018
+radius_min = 0.5 # Earth radii; hardcoded here in addition to "min_radius" in sim_param so changing that does not change the M-R model here
+σ_ρ_at_radius_switch = 3. # g/cm^3; std of mean density at radius_switch
+σ_ρ_at_radius_min = 1. # g/cm^3; std of mean density at radius_min
+
+"""
+    σ_ρ_loglinear_given_radius(R; σ_ρ_r1=σ_ρ_at_radius_min, σ_ρ_r2=σ_ρ_at_radius_switch, r1=radius_min, r2=radius_switch)
+
+Compute the standard deviation in mean density (σ_ρ) at a given planet radius (R), assuming a linear relation between log(σ_ρ) and R defined by two points.
+
+# Arguments:
+- `R::Float64`: planet radius (Earth radii).
+- `σ_ρ_r1::Float64=σ_ρ_at_radius_min`: standard deviation of mean density (g/cm^3) at radius `r1` (Earth radii).
+- `σ_ρ_r2::Float64=σ_ρ_at_radius_switch`: standard deviation of mean density (g/cm^3) at radius `r2` (Earth radii).
+- `r1::Float64=radius_min`: radius at one point (Earth radii).
+- `r2::Float64=radius_switch`: radius at another point (Earth radii).
+
+# Returns:
+The standard deviation in mean density, σ_ρ (g/cm^3), at radius `R`.
+"""
+function σ_ρ_loglinear_given_radius(R::Float64; σ_ρ_r1::Float64=σ_ρ_at_radius_min, σ_ρ_r2::Float64=σ_ρ_at_radius_switch, r1::Float64=radius_min, r2::Float64=radius_switch)
+    log_σ_ρ_r1, log_σ_ρ_r2 = log10(σ_ρ_r1), log10(σ_ρ_r2)
+    slope = (log_σ_ρ_r2 - log_σ_ρ_r1) / (r2 - r1)
+    log_σ_ρ = slope*(R - r1) + log_σ_ρ_r1
+    return 10^log_σ_ρ
+end
+
+
+
+# To define functions for drawing from the new M-R relation for planets below "radius_switch":
+
+"""
+    generate_planet_mass_from_radius_normal_density_around_earthlike_rocky(R, sim_param; ρ_min=1., ρ_max=100.)
+
+Draw a planet mass given a planet radius, from a normal distribution of mean density centered around the Earth-like rocky model.
+
+# Arguments:
+- `R::Float64`: planet radius (solar radii).
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `ρ_min::Float64=1.`: minimum density (g/cm^3) to truncate at.
+- `ρ_max::Float64=100.`: maximum density (g/cm^3) to truncate at.
+NOTE: requires an interpolation object `M_earthlike_rocky_spl` to be defined as a global.
+
+# Returns:
+A planet mass (in solar masses).
+"""
+function generate_planet_mass_from_radius_normal_density_around_earthlike_rocky(R::Float64, sim_param::SimParam; ρ_min::Float64=1., ρ_max::Float64=100.)
+    global M_earthlike_rocky_spl
+    R_in_earths = R/ExoplanetsSysSim.earth_radius
+    M_in_earths = M_earthlike_rocky_spl(R_in_earths)
+    @assert(M_in_earths > 0)
+
+    μ_ρ = density_given_mass_radius(M_in_earths, R_in_earths)
+    σ_ρ = σ_ρ_loglinear_given_radius(R_in_earths)
+    ρ_dist = Truncated(Normal(μ_ρ, σ_ρ), ρ_min, ρ_max) # truncated normal distribution for mean density (g/cm^3)
+
+    ρ = rand(ρ_dist) # draw a mean density
+    @assert(ρ > 0)
+    return mass_given_radius_density(R_in_earths, ρ)*ExoplanetsSysSim.earth_mass
+end
+
+"""
+    generate_planet_mass_from_radius_Ning2018_table_above_earthlike_rocky_below(R, sim_param; R_switch=radius_switch, ρ_min=1., ρ_max=100.)
+
+Draw a planet mass given a planet radius, from interpolating the NWG-2018 table if R > R_switch, or from the normal distribution of mean density centered around the Earth-like rocky model if R <= R_switch.
+
+# Arguments:
+- `R::Float64`: planet radius (solar radii).
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `R_switch::Float64=radius_switch`: planet radius (Earth radii) where the M-R relation switches.
+- `ρ_min::Float64=1.`: minimum density (g/cm^3) to truncate at (only for below R_switch).
+- `ρ_max::Float64=100.`: maximum density (g/cm^3) to truncate at (only for below R_switch).
+NOTE: requires an interpolation object `M_earthlike_rocky_spl` to be defined as a global.
+
+# Returns:
+A planet mass (in solar masses).
+"""
+function generate_planet_mass_from_radius_Ning2018_table_above_earthlike_rocky_below(R::Float64, sim_param::SimParam; R_switch::Float64=radius_switch, ρ_min::Float64=1., ρ_max::Float64=100.)
+    @assert(0 < R)
+    R_in_earths = R/ExoplanetsSysSim.earth_radius
+
+    if R_in_earths > R_switch
+        return generate_planet_mass_from_radius_Ning2018_table(R, sim_param::SimParam)
+    else
+        return generate_planet_mass_from_radius_normal_density_around_earthlike_rocky(R, sim_param; ρ_min=ρ_min, ρ_max=ρ_max)
+    end
+end
+
+
+
+
+
 ##### For timing the functions:
 
 sim_param = setup_sim_param_model()
 #Radii = ones(10000)*ExoplanetsSysSim.earth_radius
 Radii = (10 .^(range(MR_param.Radius_min+0.01, stop=MR_param.Radius_max-0.01, length=10000)))*ExoplanetsSysSim.earth_radius
 @time Masses = map(r -> generate_planet_mass_from_radius_Ning2018(r, sim_param), Radii)
-
 @time Masses = map(r -> generate_planet_mass_from_radius_Ning2018_table(r, sim_param), Radii)
+@time Masses = map(r -> generate_planet_mass_from_radius_normal_density_around_earthlike_rocky(r, sim_param), Radii)
+@time Masses = map(r -> generate_planet_mass_from_radius_Ning2018_table_above_earthlike_rocky_below(r, sim_param), Radii)

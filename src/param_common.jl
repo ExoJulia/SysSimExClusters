@@ -14,7 +14,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
 
     # For generating target star properties:
     add_param_fixed(sim_param,"star_table_setup", ExoplanetsSysSim.StellarTable.setup_star_table)
-    add_param_fixed(sim_param,"stellar_catalog", "q1q17_dr25_gaia_fgk_interpolate_ebprp.jld2")
+    add_param_fixed(sim_param,"stellar_catalog", "q1q17_dr25_gaia_berger_fgk_HFR2020b.jld2") #"q1q17_dr25_gaia_fgk_interpolate_ebprp.jld2"
     add_param_fixed(sim_param,"generate_kepler_target", ExoplanetsSysSim.generate_kepler_target_from_table)
     add_param_fixed(sim_param,"window_function", "DR25topwinfuncs.jld2")
     add_param_fixed(sim_param,"osd_file","dr25fgk_small_osds.jld2")
@@ -69,7 +69,8 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_active(sim_param,"num_mutual_hill_radii", 8.0)
     add_param_fixed(sim_param,"f_amd_crit", 1.0) # fraction of critical AMD to distribute
 
-    add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table) # "ExoplanetsSysSim.generate_planet_mass_from_radius_powerlaw" or "generate_planet_mass_from_radius_Ning2018" or "generate_planet_mass_from_radius_Ning2018_table"
+    #add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table)
+    add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table_above_earthlike_rocky_below)
     add_param_active(sim_param,"sigma_log_radius_in_cluster", 0.3)
     add_param_active(sim_param,"sigma_logperiod_per_pl_in_cluster", 0.2)
 
