@@ -448,11 +448,7 @@ function AMD_stability(μ::Array{T}, a::Array{T}, e::Array{T},
 	#
 	# We'll work in units where G*Mstar = 1.
 	#
-	Λ = μ .* sqrt.(a) # Ang. momentum of a circular orbit.
-	AMD = 0.0
-	for k in 1:N
-		AMD += Λ[k] * (1 - sqrt((1-e[k])*(1+e[k])) * cos(I[k]))
-	end
+	AMD, Λ = total_AMD_system(μ, a, e, I)
 	#
 	# Return a list of possibly unstable pairs, where:
 	#
@@ -499,6 +495,38 @@ function AMD_stability(μ::Array{T}, a::Array{T}, e::Array{T},
 		push!(ratios,ratio)
 	end
 	return stats,pairs,ratios
+end
+
+
+
+"""
+    total_AMD_system(μ, a, e, i)
+
+Compute the total AMD of a system.
+
+# Arguments:
+- `μ::Vector{T}`: list of planet/star mass ratios.
+- `a::Vector{T}`: list of semimajor axes.
+- `e::Vector{T}`: list of eccentricities.
+- `i::Vector{T}`: list of mutual inclinations (radians).
+Note: μ and a must be sorted from innermost to outermost.
+
+# Returns:
+- `AMD::Float64`: the total AMD of the system.
+- `Λ::Vector{T}`: list of the AMD of a circular orbit for each planet.
+"""
+function total_AMD_system(μ::Array{T}, a::Array{T}, e::Array{T}, i::Array{T}) where T <: Real
+    N = length(μ)
+    @assert(length(a) == N)
+    @assert(length(e) == N)
+    @assert(length(i) == N)
+
+    Λ = μ .* sqrt.(a) # angular momentum of a circular orbit
+    AMD = 0.0
+    for k in 1:N
+        AMD += Λ[k] * (1 - sqrt((1-e[k])*(1+e[k])) * cos(i[k]))
+    end
+    return AMD, Λ
 end
 
 
