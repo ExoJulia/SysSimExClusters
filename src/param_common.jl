@@ -151,6 +151,8 @@ function write_model_params(f, sim_param::SimParam)
         println(f, "# mr_model: Ning2018")
     elseif string(get_function(sim_param,"generate_planet_mass_from_radius")) == "generate_planet_mass_from_radius_Ning2018_table"
         println(f, "# mr_model: Ning2018_table")
+    elseif string(get_function(sim_param,"generate_planet_mass_from_radius")) == "generate_planet_mass_from_radius_Ning2018_table_above_earthlike_rocky_below"
+        println(f, "# mr_model: Ning2018_table_above_Earthlike_rocky_below")
     end
 
     if string(get_function(sim_param,"generate_planetary_system")) == "generate_planetary_system_clustered"
