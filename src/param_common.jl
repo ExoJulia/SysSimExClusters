@@ -70,7 +70,7 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"f_amd_crit", 1.0) # fraction of critical AMD to distribute
 
     #add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table)
-    add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table_above_earthlike_rocky_below)
+    add_param_fixed(sim_param,"generate_planet_mass_from_radius", generate_planet_mass_from_radius_Ning2018_table_above_lognormal_mass_earthlike_rocky_below)
     add_param_active(sim_param,"sigma_log_radius_in_cluster", 0.3)
     add_param_active(sim_param,"sigma_logperiod_per_pl_in_cluster", 0.2)
 
@@ -151,8 +151,12 @@ function write_model_params(f, sim_param::SimParam)
         println(f, "# mr_model: Ning2018")
     elseif string(get_function(sim_param,"generate_planet_mass_from_radius")) == "generate_planet_mass_from_radius_Ning2018_table"
         println(f, "# mr_model: Ning2018_table")
-    elseif string(get_function(sim_param,"generate_planet_mass_from_radius")) == "generate_planet_mass_from_radius_Ning2018_table_above_earthlike_rocky_below"
-        println(f, "# mr_model: Ning2018_table_above_Earthlike_rocky_below")
+    elseif string(get_function(sim_param,"generate_planet_mass_from_radius")) == "generate_planet_mass_from_radius_Ning2018_table_above_normal_density_earthlike_rocky_below"
+        println(f, "# mr_model: Ning2018_table (above radius_switch)")
+        println(f, "# mr_model: Normal density around Earthlike rocky (below radius_switch)")
+    elseif string(get_function(sim_param,"generate_planet_mass_from_radius")) == "generate_planet_mass_from_radius_Ning2018_table_above_lognormal_mass_earthlike_rocky_below"
+        println(f, "# mr_model: Ning2018_table (above radius_switch)")
+        println(f, "# mr_model: Lognormal mass around Earthlike rocky (below radius_switch)")
     end
 
     if string(get_function(sim_param,"generate_planetary_system")) == "generate_planetary_system_clustered"
