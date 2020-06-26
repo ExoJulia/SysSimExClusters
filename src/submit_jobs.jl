@@ -23,7 +23,7 @@ function generate_pbs_optimize(run_number)
     f_name = "optimize_job_"*string(run_number)*".pbs"
     f = open(f_name, "w")
     write_pbs_settings(f)
-    println(f, "/gpfs/group/ebf11/default/sw/julia-0.7.0/bin/julia optimize_split_stars.jl "*string(run_number))
+    println(f, "/gpfs/group/ebf11/default/sw/julia-1.4.1/bin/julia optimize_split_stars.jl "*string(run_number))
     close(f)
 
     return f_name
@@ -47,7 +47,7 @@ function generate_pbs_compute_distances_given_params_random(run_number)
     f_name = "compute_distances_random_job_"*string(run_number)*".pbs"
     f = open(f_name, "w")
     write_pbs_settings(f)
-    println(f, "/gpfs/group/ebf11/default/sw/julia-0.7.0/bin/julia compute_distances_given_params_random.jl "*string(run_number))
+    println(f, "/gpfs/group/ebf11/default/sw/julia-1.4.1/bin/julia compute_distances_given_params_random.jl "*string(run_number))
     close(f)
 
     return f_name
@@ -71,7 +71,7 @@ function generate_pbs_compute_distances_given_params_parallel(run_number)
     f_name = "compute_distances_parallel_job_"*string(run_number)*".pbs"
     f = open(f_name, "w")
     write_pbs_settings(f)
-    println(f, "/gpfs/group/ebf11/default/sw/julia-0.7.0/bin/julia compute_distances_given_params_parallel.jl "*string(run_number))
+    println(f, "/gpfs/group/ebf11/default/sw/julia-1.4.1/bin/julia compute_distances_given_params_parallel.jl "*string(run_number))
     close(f)
 
     return f_name
@@ -95,7 +95,7 @@ function generate_pbs_compute_distances_given_params(run_number::Int64, runs::In
     f_name = "compute_distances_job_$(run_number)_of_$runs.pbs"
     f = open(f_name, "w")
     write_pbs_settings(f)
-    println(f, "/gpfs/group/ebf11/default/sw/julia-0.7.0/bin/julia compute_distances_given_params.jl $(run_number) $runs")
+    println(f, "/gpfs/group/ebf11/default/sw/julia-1.4.1/bin/julia compute_distances_given_params.jl $(run_number) $runs")
     close(f)
 
     return f_name
@@ -119,7 +119,7 @@ function generate_pbs_GP_draw_points_parallel(run_number)
     f_name = "GP_draw_points_parallel_job_"*string(run_number)*".pbs"
     f = open(f_name, "w")
     write_pbs_settings(f)
-    println(f, "/gpfs/group/ebf11/default/sw/julia-0.7.0/bin/julia GP_draw_points_parallel.jl "*string(run_number))
+    println(f, "/gpfs/group/ebf11/default/sw/julia-1.4.1/bin/julia GP_draw_points_parallel.jl "*string(run_number))
     close(f)
 
     return f_name

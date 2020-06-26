@@ -15,7 +15,7 @@ model_name = "Clustered_P_R_optimization"
 optimization_number = "_random"*ARGS[1] # if want to run on the cluster with random initial active parameters: "_random"*ARGS[1]
 names_split = ["bluer", "redder"]
 AD_mod = true
-num_targs = 88912
+num_targs = 86760
 max_incl_sys = 0.
 max_evals = 5000
 dists_include_split = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
@@ -33,7 +33,7 @@ write_model_params(f, sim_param)
 
 ##### To split the Kepler data into redder and bluer halves:
 
-bprp = stellar_catalog[:bp_rp] .- stellar_catalog[:e_bp_min_rp_interp]
+bprp = stellar_catalog[!,:bp_rp] .- stellar_catalog[!,:e_bp_min_rp_interp]
 med_bprp = median(bprp)
 idx_bluer = collect(1:size(stellar_catalog,1))[bprp .< med_bprp]
 idx_redder = collect(1:size(stellar_catalog,1))[bprp .>= med_bprp]

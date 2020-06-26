@@ -12,7 +12,7 @@ sim_param = setup_sim_param_model()
 
 names_split = ["bluer", "redder"]
 AD_mod = true
-num_targs = 88912
+num_targs = 86760
 max_incl_sys = 0.
 num_evals_weights = 100
 
@@ -28,7 +28,7 @@ write_model_params(f, sim_param)
 
 ##### To split the Kepler data into redder and bluer halves:
 
-bprp = stellar_catalog[:bp_rp] .- stellar_catalog[:e_bp_min_rp_interp]
+bprp = stellar_catalog[!,:bp_rp] .- stellar_catalog[!,:e_bp_min_rp_interp]
 med_bprp = median(bprp)
 idx_bluer = collect(1:size(stellar_catalog,1))[bprp .< med_bprp]
 idx_redder = collect(1:size(stellar_catalog,1))[bprp .>= med_bprp]

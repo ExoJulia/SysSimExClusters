@@ -41,7 +41,7 @@ write_model_params(f, sim_param)
 
 ##### To split the Kepler data into redder and bluer halves:
 
-bprp = stellar_catalog[:bp_rp] .- stellar_catalog[:e_bp_min_rp_interp]
+bprp = stellar_catalog[!,:bp_rp] .- stellar_catalog[!,:e_bp_min_rp_interp]
 med_bprp = median(bprp)
 idx_bluer = collect(1:size(stellar_catalog,1))[bprp .< med_bprp]
 idx_redder = collect(1:size(stellar_catalog,1))[bprp .>= med_bprp]
