@@ -67,7 +67,14 @@ function generate_stable_cluster(star::StarT, sim_param::SimParam; n::Int64=1) w
         attempts_periods += 1
         P = rand(Pdist, n)
         if test_stability(P, mass, star.mass, sim_param)
-            found_good_periods = true
+            # If pass mutual Hill criteria, also check circular MMR overlap criteria:
+            a = semimajor_axis.(P, mass .+star.mass)
+            μ = mass ./star.mass
+            if test_stability_circular_MMR_overlap(μ, a)
+                found_good_periods = true
+            else
+                @info("Found set of periods passing mutual Hill criteria but not circular MMR overlap criteria.")
+            end
         end
     end # while trying to draw periods
     #
@@ -105,7 +112,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     # To include a dependence on stellar color for the fraction of stars with planets:
     #
     global stellar_catalog
-    star_color = stellar_catalog[:bp_rp][star.id]
+    star_color = stellar_catalog[star.id, :bp_rp] - stellar_catalog[star.id, :e_bp_min_rp_interp]
     f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
     f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
     med_color = get_real(sim_param, "med_color")
@@ -219,6 +226,15 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
 
             if test_stability(view(Plist,1:pl_stop), view(masslist,1:pl_stop), star.mass, sim_param)
                 valid_period_scale = true
+                #= If pass mutual Hill criteria, also check circular MMR overlap criteria: ##### WARNING: currently bugged (need to ignore NaNs)
+                alist = semimajor_axis.(view(Plist,1:pl_stop), view(masslist,1:pl_stop) .+star.mass)
+                μlist = view(masslist,1:pl_stop) ./star.mass
+                if test_stability_circular_MMR_overlap(μlist, alist)
+                    valid_period_scale = true
+                else
+                    @info("Found period scale passing mutual Hill criteria but not circular MMR overlap criteria.")
+                end
+                =#
             end
         end  # while !valid_period_scale...
 
@@ -260,6 +276,10 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
 
     # Now compute the critical AMD for the system and distribute it between the planets (to draw eccentricities and inclinations):
 
+    f_amd_crit = get_real(sim_param, "f_amd_crit")
+    f_amd_crit = f_amd_crit + (1 - f_amd_crit)*rand() # uniform between f_amd_crit and 1
+    @assert(0 <= f_amd_crit <= 1)
+
     ecclist::Array{Float64,1} = Array{Float64}(undef, num_pl)
     ωlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
     Ωlist::Array{Float64,1} = Array{Float64}(undef, num_pl)
@@ -269,7 +289,14 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
 
     μlist = masslist ./ star.mass # mass ratios
     alist = map(P -> semimajor_axis(P, star.mass), Plist)
-    AMDlist, ecclist, ωlist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; check_stability=false)
+    if num_pl == 1
+        generate_e_omega = get_function(sim_param, "generate_e_omega")
+        sigma_ecc::Float64 = get_real(sim_param, "sigma_hk")
+        ecc::Float64, ω::Float64 = generate_e_omega(sigma_ecc)
+        AMDlist, ecclist, ωlist, inclmutlist = μlist .*sqrt.(alist) .*(1 - sqrt(1 - ecc^2)), [ecc], [ω], [0.]
+    else
+        AMDlist, ecclist, ωlist, inclmutlist = draw_ecc_incl_system_critical_AMD(μlist, alist; f_amd_crit=f_amd_crit, check_stability=false)
+    end
 
     Ωlist, meananomlist = 2π .* rand(num_pl), 2π .* rand(num_pl) # relative to the reference plane
 

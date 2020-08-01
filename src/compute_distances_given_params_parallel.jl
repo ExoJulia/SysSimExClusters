@@ -21,7 +21,7 @@ addprocs(2) #number of additional processors
 model_name = "Clustered_P_R"
 names_split = ["bluer", "redder"]
 AD_mod = true
-num_targs = 79935
+num_targs = 88912
 max_incl_sys = 0.
 dists_include_split = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 dists_include_all = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
@@ -47,7 +47,7 @@ write_model_params(f, sim_param)
 
 ##### To split the Kepler data into redder and bluer halves:
 
-bprp = stellar_catalog[:bp_rp]
+bprp = stellar_catalog[:bp_rp] .- stellar_catalog[:e_bp_min_rp_interp]
 med_bprp = median(bprp)
 idx_bluer = collect(1:size(stellar_catalog,1))[bprp .< med_bprp]
 idx_redder = collect(1:size(stellar_catalog,1))[bprp .>= med_bprp]
@@ -66,7 +66,7 @@ cssck = calc_summary_stats_collection_Kepler(stellar_catalog, planet_catalog, na
 @everywhere add_param_fixed(sim_param,"max_incl_sys", max_incl_sys)
 
 # To load and compute the weights, target distance, and target distance std from a precomputed file:
-active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file_split_samples("Clustered_P_R_split_stars_weights_ADmod_$(AD_mod)_targs79935_evals100_all_pairs.txt", 4950, sim_param; names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], dists_include_all=dists_include_all, f=f)
+active_param_true, weights, target_fitness, target_fitness_std = compute_weights_target_fitness_std_from_file_split_samples("Clustered_P_R_split_stars_weights_ADmod_$(AD_mod)_targs88912_evals100_all_pairs.txt", 4950, sim_param; names_samples=names_split, dists_include_samples=[dists_include_split, dists_include_split], dists_include_all=dists_include_all, f=f)
 weights_split = [weights["bluer"], weights["redder"]]
 
 

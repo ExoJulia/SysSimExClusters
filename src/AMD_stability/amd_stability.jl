@@ -281,6 +281,60 @@ function AMD_stability(μ1::Real,μ2::Real,a1::Real,a2::Real,Cx::Real)
 end
 
 """
+    test_stability_circular_MMR_overlap(μ1, μ2, a1, a2)
+
+Determines whether a pair of planets passes the MMR overlap condition for circular orbits.
+
+# Arguments:
+- `μ1::Real`: planet/star mass ratio of inner planet.
+- `μ2::Real`: planet/star mass ratio of outer planet.
+- `a1::Real`: semimajor axis of inner planet.
+- `a2::Real`: semimajor axis of outer planet.
+
+# Returns:
+True if the planet pair is stable against MMR overlap for circular orbits; false if not.
+"""
+function test_stability_circular_MMR_overlap(μ1::Real, μ2::Real, a1::Real, a2::Real)
+    @assert(a1 <= a2)
+    α = a1/a2
+    ϵ = μ1+μ2
+    α_crit = 1 - 1.46*ϵ^(2/7)
+    return α < α_crit # if true, pair is stable against circular MMR overlap
+end
+
+"""
+    test_stability_circular_MMR_overlap(μ, a)
+
+Determines whether a planetary system passes the MMR overlap condition for circular orbits.
+
+# Arguments:
+- `μ::Vector{T}`: list of planet/star mass ratios.
+- `a::Vector{T}`: list of semimajor axes.
+Note: `μ` and `a` do not have to be sorted.
+
+# Returns:
+True if the planetary system is stable against MMR overlap for circular orbits; false if not.
+"""
+function test_stability_circular_MMR_overlap(μ::Array{T}, a::Array{T}) where T <: Real
+    @assert(length(μ) == length(a))
+    found_instability = false
+    order = sortperm(a)
+    a2 = a[order[1]]
+    μ2 = μ[order[1]]
+    for i in 1:(length(a)-1)
+        a1 = a2
+        a2 = a[order[i+1]]
+        μ1 = μ2
+        μ2 = μ[order[i+1]]
+        if !test_stability_circular_MMR_overlap(μ1, μ2, a1, a2)
+            found_instability = true
+            break
+        end
+    end
+    return !found_instability
+end
+
+"""
     relative_AMD_collision(μ1, μ2, a1, a2)
 
 Compute the critical (minimum) relative AMD for collision, based on Equations 29 & 39 in Laskar & Petit (2017).
@@ -303,7 +357,7 @@ function relative_AMD_collision(μ1::Real, μ2::Real, a1::Real, a2::Real)
     e1 = critical_eccentricity(γ,α)
     e2 = 1 - α - α*e1
     @assert(a1*(1 + e1) ≈ a2*(1 - e2))
-    C_coll = γ*sqrt(α)*(1 - sqrt((1-e1)*(1+e1)) + 1 - sqrt((1-e2)*(1+e2)))
+    C_coll = γ*sqrt(α)*(1 - sqrt((1-e1)*(1+e1))) + (1 - sqrt((1-e2)*(1+e2)))
     return C_coll
 end
 
@@ -394,11 +448,7 @@ function AMD_stability(μ::Array{T}, a::Array{T}, e::Array{T},
 	#
 	# We'll work in units where G*Mstar = 1.
 	#
-	Λ = μ .* sqrt.(a) # Ang. momentum of a circular orbit.
-	AMD = 0.0
-	for k in 1:N
-		AMD += Λ[k] * (1 - sqrt((1-e[k])*(1+e[k])) * cos(I[k]))
-	end
+	AMD, Λ = total_AMD_system(μ, a, e, I)
 	#
 	# Return a list of possibly unstable pairs, where:
 	#
@@ -445,6 +495,38 @@ function AMD_stability(μ::Array{T}, a::Array{T}, e::Array{T},
 		push!(ratios,ratio)
 	end
 	return stats,pairs,ratios
+end
+
+
+
+"""
+    total_AMD_system(μ, a, e, i)
+
+Compute the total AMD of a system.
+
+# Arguments:
+- `μ::Vector{T}`: list of planet/star mass ratios.
+- `a::Vector{T}`: list of semimajor axes.
+- `e::Vector{T}`: list of eccentricities.
+- `i::Vector{T}`: list of mutual inclinations (radians).
+Note: μ and a must be sorted from innermost to outermost.
+
+# Returns:
+- `AMD::Float64`: the total AMD of the system.
+- `Λ::Vector{T}`: list of the AMD of a circular orbit for each planet.
+"""
+function total_AMD_system(μ::Array{T}, a::Array{T}, e::Array{T}, i::Array{T}) where T <: Real
+    N = length(μ)
+    @assert(length(a) == N)
+    @assert(length(e) == N)
+    @assert(length(i) == N)
+
+    Λ = μ .* sqrt.(a) # angular momentum of a circular orbit
+    AMD = 0.0
+    for k in 1:N
+        AMD += Λ[k] * (1 - sqrt((1-e[k])*(1+e[k])) * cos(i[k]))
+    end
+    return AMD, Λ
 end
 
 
@@ -575,13 +657,14 @@ end
 
 
 """
-    draw_ecc_incl_system_critical_AMD(μ, a; check_stability=false)
+    draw_ecc_incl_system_critical_AMD(μ, a; f_amd_crit=1., check_stability=false)
 
 Draw eccentricities and inclinations for the planets in a system by distributing the critical AMD of the system.
 
 # Arguments:
 - `μ::Vector{T}`: list of planet/star mass ratios.
 - `a::Vector{T}`: list of semimajor axes.
+- `f_amd_crit::Float64=1.`: fraction of the critical system AMD to distribute.
 - `check_stability::Bool=false`: whether to double check (if true) or not (if false) that the system is AMD-stable.
 NOTE 1: μ and a must be sorted from innermost to outermost.
 NOTE 2: by definition, the system should ALWAYS be AMD-stable if drawn using this function. Thus the `check_stability` flag is more of a debugging/testing tool.
@@ -592,11 +675,12 @@ NOTE 2: by definition, the system should ALWAYS be AMD-stable if drawn using thi
 - `ω::Vector{Float64}`: list of arguments of pericenter (rad) drawn for the planets.
 - `i::Vector{Float64}`: list of inclinations (rad) relative to the invariant plane drawn for the planets.
 """
-function draw_ecc_incl_system_critical_AMD(μ::Vector{T}, a::Vector{T}; check_stability::Bool=false) where T <: Real
+function draw_ecc_incl_system_critical_AMD(μ::Vector{T}, a::Vector{T}; f_amd_crit::Float64=1., check_stability::Bool=false) where T <: Real
     N = length(μ)
     @assert(length(a) == N)
+    @assert(0 <= f_amd_crit <= 1)
 
-    AMD_tot = critical_AMD_system(μ, a) # total (critical) AMD of system
+    AMD_tot = f_amd_crit*critical_AMD_system(μ, a) # total AMD of system to distribute
     AMD = distribute_AMD_planets(AMD_tot, μ) # list of AMD distributed to each planet
 
     e = Vector{Float64}(undef, N)

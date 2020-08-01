@@ -292,7 +292,7 @@ function calc_all_distances_dict(sim_param::SimParam, ss1::CatalogSummaryStatist
 
     # Compute KS and AD distances for the marginals:
     ADdist = AD_mod ? ExoplanetsSysSim.ADstats_mod : ExoplanetsSysSim.ADstats
-    obs = ["periods", "period_ratios", "durations", "durations_norm_circ", "duration_ratios", "duration_ratios_nonmmr", "duration_ratios_mmr", "depths", "depths_above", "depths_below", "radius_ratios", "radius_ratios_above", "radius_ratios_below", "radius_ratios_across", "radii_partitioning", "radii_monotonicity", "gap_complexity"]
+    obs = ["periods", "period_ratios", "durations", "durations_norm_circ", "durations_norm_circ_singles", "durations_norm_circ_multis", "duration_ratios", "duration_ratios_nonmmr", "duration_ratios_mmr", "depths", "depths_above", "depths_below", "radius_ratios", "radius_ratios_above", "radius_ratios_below", "radius_ratios_across", "radii_partitioning", "radii_monotonicity", "gap_complexity"]
     for (i,key) in enumerate(obs)
         # NOTE: if the KS or AD distance cannot be computed (i.e. not enough observed planets), assign Inf
         dists[key*"_KS"] = min(length(ss1.stat[key]), length(ss2.stat[key]))>0 ? ExoplanetsSysSim.ksstats(ss1.stat[key], ss2.stat[key])[5] : Inf

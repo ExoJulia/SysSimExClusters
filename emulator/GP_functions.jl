@@ -217,7 +217,7 @@ function predict_model_at_n_points_from_uniform_prior(params_names::Array{Symbol
         prior_draws_GP_table[i, dims+1:dims+3] = [GP_result[j][1] for j in 1:3]
     end
 
-    return DataFrame(prior_draws_GP_table, [params_names; [:GP_mean, :GP_std, :GP_posterior_draw]])
+    return DataFrame(prior_draws_GP_table, [params_names; ["GP_mean", "GP_std", "GP_posterior_draw"]])
 end
 
 """
@@ -247,7 +247,7 @@ end
 """
 Evaluates 'predict_model_from_uniform_prior_until_accept_point' until 'n_accept' total points are accepted (in series).
 """
-function predict_model_from_uniform_prior_until_accept_n_points(params_names::Array{Symbol,1}, xdata::Array{Float64,2}, ydata::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, ydata_err::Vector{Float64}, n_accept::Int64; prior_bounds::Union{Array{Tuple{Float64,Float64},1}, Nothing}=nothing, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf)
+function predict_model_from_uniform_prior_until_accept_n_points(params_names::Array{String,1}, xdata::Array{Float64,2}, ydata::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, ydata_err::Vector{Float64}, n_accept::Int64; prior_bounds::Union{Array{Tuple{Float64,Float64},1}, Nothing}=nothing, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf)
     @assert size(xdata, 2) == length(params_names)
     @assert size(xdata, 1) == length(ydata) == length(ydata_err)
     @assert n_accept > 0
@@ -273,13 +273,13 @@ function predict_model_from_uniform_prior_until_accept_n_points(params_names::Ar
 
     println("Accepted ", n_accept, " points after ", count_draws, " draws.")
 
-    return DataFrame(prior_draws_GP_table, [params_names; [:GP_mean, :GP_std, :GP_posterior_draw]])
+    return DataFrame(prior_draws_GP_table, [params_names; ["GP_mean", "GP_std", "GP_posterior_draw"]])
 end
 
 """
 Evaluates 'predict_model_from_uniform_prior_until_accept_point' until 'n_accept' total points are accepted (in parallel).
 """
-function predict_model_from_uniform_prior_until_accept_n_points_parallel(params_names::Array{Symbol,1}, xdata::Array{Float64,2}, ydata::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, ydata_err::Vector{Float64}, n_accept::Int64; prior_bounds::Union{Array{Tuple{Float64,Float64},1}, Nothing}=nothing, n_batch::Int64=n_accept, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf)
+function predict_model_from_uniform_prior_until_accept_n_points_parallel(params_names::Array{String,1}, xdata::Array{Float64,2}, ydata::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, ydata_err::Vector{Float64}, n_accept::Int64; prior_bounds::Union{Array{Tuple{Float64,Float64},1}, Nothing}=nothing, n_batch::Int64=n_accept, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf)
     @assert size(xdata, 2) == length(params_names)
     @assert size(xdata, 1) == length(ydata) == length(ydata_err)
     @assert rem(n_accept, n_batch) == 0 # 'n_batch' is the number of batches, NOT the number of points per batch
@@ -303,7 +303,7 @@ function predict_model_from_uniform_prior_until_accept_n_points_parallel(params_
 
     println("Accepted ", n_accept, " points after ", count_draws, " draws.")
 
-    return DataFrame(prior_draws_GP_table, [params_names; [:GP_mean, :GP_std, :GP_posterior_draw]])
+    return DataFrame(prior_draws_GP_table, [params_names; ["GP_mean", "GP_std", "GP_posterior_draw"]])
 end
 
 

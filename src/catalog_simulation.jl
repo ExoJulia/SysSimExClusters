@@ -4,7 +4,7 @@ function save_physical_catalog(cat_phys::KeplerPhysicalCatalog, sim_param::SimPa
 
     f = open(joinpath(save_path, "physical_catalog$run_number.csv"), "w")
     write_model_params(f, sim_param)
-    println(f, "target_id,star_id,planet_mass,planet_radius,clusterid,period,ecc,incl_mut,star_mass,star_radius")
+    println(f, "target_id,star_id,planet_mass,planet_radius,clusterid,period,ecc,incl_mut,incl,star_mass,star_radius")
     for (i,targ) in enumerate(cat_phys.target)
         if length(targ.sys) > 1 #this should never happen
             println("There is more than one system for a given target? Check index: ", i)
@@ -16,7 +16,7 @@ function save_physical_catalog(cat_phys::KeplerPhysicalCatalog, sim_param::SimPa
             for (j,planet) in enumerate(sys.planet)
                 incl_pl, Ω_pl = sys.orbit[j].incl, sys.orbit[j].asc_node
                 inclmut_pl = calc_incl_spherical_cosine_law(incl_ref, incl_pl, Ω_pl-Ω_ref)
-                println(f, join([i, sys.star.id, planet.mass, planet.radius, planet.id, sys.orbit[j].P, sys.orbit[j].ecc, inclmut_pl, sys.star.mass, sys.star.radius], ","))
+                println(f, join([i, sys.star.id, planet.mass, planet.radius, planet.id, sys.orbit[j].P, sys.orbit[j].ecc, inclmut_pl, sys.orbit[j].incl, sys.star.mass, sys.star.radius], ","))
             end
         end
     end
@@ -105,6 +105,22 @@ function save_mutualinclinations_all(cat_phys::KeplerPhysicalCatalog, sim_param:
     close(f)
 end
 
+function save_inclinations_all(cat_phys::KeplerPhysicalCatalog, sim_param::SimParam; save_path::String="", run_number::Union{String,Int64}="")
+
+    f = open(joinpath(save_path, "inclinations_all$run_number.out"), "w")
+    write_model_params(f, sim_param)
+    for (i,targ) in enumerate(cat_phys.target)
+        if length(targ.sys[1].orbit) > 0
+            incl_sys = Array{Float64}(undef, length(targ.sys[1].orbit))
+            for (j,planet) in enumerate(targ.sys[1].orbit)
+                incl_sys[j] = planet.incl
+            end
+            println(f, incl_sys)
+        end
+    end
+    close(f)
+end
+
 function save_radii_all(cat_phys::KeplerPhysicalCatalog, sim_param::SimParam; save_path::String="", run_number::Union{String,Int64}="")
 
     f = open(joinpath(save_path, "radii_all$run_number.out"), "w")
@@ -172,6 +188,7 @@ function save_physical_catalog_given_cat_phys(cat_phys::KeplerPhysicalCatalog, s
     save_periods_all(cat_phys, sim_param; save_path=save_path, run_number=run_number)
     save_eccentricities_all(cat_phys, sim_param; save_path=save_path, run_number=run_number)
     save_mutualinclinations_all(cat_phys, sim_param; save_path=save_path, run_number=run_number)
+    save_inclinations_all(cat_phys, sim_param; save_path=save_path, run_number=run_number)
     save_radii_all(cat_phys, sim_param; save_path=save_path, run_number=run_number)
     save_masses_all(cat_phys, sim_param; save_path=save_path, run_number=run_number)
 
