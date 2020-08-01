@@ -19,7 +19,7 @@ max_incl_sys = 0.
 dists_include_split = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 dists_include_all = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
 
-data_table = CSV.read("../emulator/GP_files/durations_KS/Active_params_distances_table_best100000_every10.txt", delim=" ", allowmissing=:none)
+data_table = CSV.read("../emulator/GP_files/durations_KS/Active_params_distances_table_best100000_every10.txt")
 n_params = length(make_vector_of_active_param_keys(sim_param))
 params_keys = names(data_table)[1:n_params]
 @assert all(make_vector_of_active_param_keys(sim_param) .== String.(params_keys))

@@ -51,7 +51,7 @@ Calculate the angle between two orbits using the spherical law of Cosines.
 function calc_incl_spherical_cosine_law(i1::Float64, i2::Float64, ΔΩ::Float64)
     cos_i = cos(i1)*cos(i2) + sin(i1)*sin(i2)*cos(ΔΩ)
     if cos_i > 1 || cos_i < -1
-        @warn "cos_i = $(cos_i); rounding result." maxlog=10
+        #@warn "cos_i = $(cos_i); rounding result." maxlog=10
         cos_i = round(cos_i)
     end
     return acos(cos_i)

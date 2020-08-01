@@ -593,7 +593,7 @@ end
 
 
 ##### For timing the functions:
-
+#=
 sim_param = setup_sim_param_model()
 #Radii = ones(10000)*ExoplanetsSysSim.earth_radius
 Radii = (10 .^(range(MR_param.Radius_min+0.01, stop=MR_param.Radius_max-0.01, length=10000)))*ExoplanetsSysSim.earth_radius
@@ -609,3 +609,4 @@ println("Testing and timing M-R from normal density around Earth-like rocky and 
 println("Testing and timing M-R from lognormal mass around Earth-like rocky and combining with Ning2018 table:")
 @time Masses = map(r -> generate_planet_mass_from_radius_lognormal_mass_around_earthlike_rocky(r, sim_param), Radii)
 @time Masses = map(r -> generate_planet_mass_from_radius_Ning2018_table_above_lognormal_mass_earthlike_rocky_below(r, sim_param), Radii)
+=#
