@@ -7,25 +7,25 @@ include(joinpath(dir_path, "../src/optimization.jl"))
 ##### To load model parameters found using the GP emulator and simulate catalogs if they pass a distance threshold:
 
 save_path = "test"
-file_name = "GP_train2000_meanf75.0_sigmaf2.7_lscales37.22_vol17.92_points50000_meanInf_stdInf_post-35.0.csv"
+file_name = "GP_train2000_meanf75.0_sigmaf2.7_lscales9.7_vol109.18_points50000_meanInf_stdInf_post-30.0.csv"
 GP_points = CSV.read(joinpath(save_path, file_name), comment="#")
 active_params_names = names(GP_points)[1:end-3]
-active_params_best_all = GP_points[active_params_names]
+active_params_best_all = GP_points[!,active_params_names]
 
 # If transformed:
 #
-i_tf, j_tf = 4,5 # indices of transformed parameters
-active_params_names[i_tf:j_tf] = [Symbol("log_rate_clusters"), Symbol("log_rate_planets_per_cluster")]
-active_params_best_all[:,i_tf], active_params_best_all[:,j_tf] = (active_params_best_all[:,i_tf] .- active_params_best_all[:,j_tf])/2., (active_params_best_all[:,i_tf] .+ active_params_best_all[:,j_tf])/2.
-names!(active_params_best_all, active_params_names)
+i_tf, j_tf = 3,4 # indices of transformed parameters
+active_params_names[i_tf:j_tf] = ["log_rate_clusters", "log_rate_planets_per_cluster"]
+active_params_best_all[!,i_tf], active_params_best_all[!,j_tf] = (active_params_best_all[!,i_tf] .- active_params_best_all[!,j_tf])/2., (active_params_best_all[!,i_tf] .+ active_params_best_all[!,j_tf])/2.
+rename!(active_params_best_all, Symbol.(active_params_names))
 #
 
 model_name = "Clustered_P_R"
 names_split = ["bluer", "redder"]
 AD_mod = true
-num_targs = 88912
+num_targs = 86760
 dists_include_split = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
-dists_include_all = ["delta_f", "mult_CRPD_r", "periods_KS", "period_ratios_KS", "durations_KS", "duration_ratios_nonmmr_KS", "duration_ratios_mmr_KS", "depths_KS", "radius_ratios_KS"]
+dists_include_all = dists_include_split
 
 d_threshold, mean_f = 40., 75.
 n_pass = 1000 # number of simulations we want to pass the distance threshold
@@ -40,7 +40,7 @@ f = open(joinpath(save_path, file_name), "w")
 
 ##### To split the Kepler data into redder and bluer halves:
 
-bprp = stellar_catalog[:bp_rp] .- stellar_catalog[:e_bp_min_rp_interp]
+bprp = stellar_catalog[!,:bp_rp] .- stellar_catalog[!,:e_bp_min_rp_interp]
 med_bprp = median(bprp)
 idx_bluer = collect(1:size(stellar_catalog,1))[bprp .< med_bprp]
 idx_redder = collect(1:size(stellar_catalog,1))[bprp .>= med_bprp]

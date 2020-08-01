@@ -4,7 +4,7 @@ include(joinpath(dir_path, "../src/clusters.jl"))
 include(joinpath(dir_path, "../src/planetary_catalog.jl"))
 
 sim_param = setup_sim_param_model()
-add_param_fixed(sim_param,"num_targets_sim_pass_one", 88912*5)
+add_param_fixed(sim_param,"num_targets_sim_pass_one", 86760*5)
 add_param_fixed(sim_param,"max_incl_sys", 0.)
 
 
