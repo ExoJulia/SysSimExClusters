@@ -1,56 +1,87 @@
 # SysSimExClusters
 
-This repository provides a comprehensive forward modelling framework for studying planetary systems.
-
-<center><img src="/best_models/Clustered_P_R_observed.gif" alt="Best fit clustered models" width="800"/></center>  
-
-We develop and provide several *statistical* models for describing the intrinsic planetary systems, their architectures, and the correlations within multi-planet systems, using the Kepler population of exoplanet candidates. Our specific models are described in the following papers:
-
-* He, Ford, and Ragozzine (2019) (Paper I): \[published in [MNRAS](https://doi.org/10.1093/mnras/stz2869)\] \[[arXiv](https://arxiv.org/abs/1907.07773)\]
-* He, Ford, and Ragozzine (2020) (Paper II): \[[arXiv](https://arxiv.org/abs/2003.04348)\]
-* He et al (2020b) (Paper III): \[submitted to AJ\] \[[arXiv](https://arxiv.org/abs/2007.14473)\]
-
-**Important:** We have a separate code branch for each paper (e.g. "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020", "He_et_al_2020b"); these should be used if you want to run our code instead of the master branch, which is actively being updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
+He et al (2020b) (Paper III): \[submitted to AJ\] \[[arXiv](https://arxiv.org/abs/2007.14473)\]
 
 
 
-## How do I use these models?
 
-We provide a large set of simulated catalogs from our models in the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder. If you simply wish to use these simulated catalogs as examples of our models, then no installation is required! Simply download any of these tables and use them for your own science. To be able to use them, you must understand that we provide two types of catalogs:
+## To download simulated catalogs from our models:
 
-* *Physical catalog:* a set of intrinsic, physical planetary systems (before any observations; contains properties like the true orbital periods, planet radii, etc.)
-* *Observed catalog:* a set of transiting and detected planet candidates derived from a *physical catalog* (after a Kepler-like mission; contains properties like the measured orbital periods, transit depths, etc.)
+* Go to the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder.
+* Navigate into "He_et_al_2020b/" and through the subdirectories. 
+* Download the "physical_catalogs.zip" file, which contains many "physical_catalogX.csv" tables (X = an index/number) including all the physical planets in each simulated catalog.
 
-Refer to the README of the branch specific to each paper for complete details on what each set of catalogs contains.
+| target_id | star_id | planet_mass    | planet_radius | clusterid | period     | ecc      | incl_mut  | incl      | star_mass      | star_radius |
+|-----------|---------|----------------|---------------|-----------|------------|----------|-----------|-----------|----------------|-------------|
+|           |         | (solar masses) | (solar radii) |           | (days)     |          | (radians) | (radians) | (solar masses) | (solar radii) |
+| 1         | 23415   | 1.5826e-6      | 0.0080        | 1         | 24.6532    | 0.1009   | 0.0821    | 0.8209    | 0.75           | 0.735       |
+| ...       | ...     | ...            | ...           | ...       | ...        | ...      | ...       | ...       | ...            | ...         |
+
+Note that compared to the physical catalogs from Paper II, these files have an extra column (the inclination relative to the sky plane, "incl").
+
+* Download the "observed_catalogs.zip" file, which contains many "observed_catalogX.csv" tables (X = an index/number) including all the observed planets that a simulated Kepler mission would detect given the true planetary systems listed in "physical_catalogX.csv".
+
+| target_id | star_id | period    | depth   | duration | star_mass      | star_radius |
+|-----------|---------|-----------|---------|----------|----------------|-------------|
+|           |         | (days)    |         | (days)   | (solar masses) | (solar radii) |
+| 250       | 62933   | 127.1125  | 0.00075 | 0.3246   | 1.074          | 1.146       |
+| ...       | ...     | ...       | ...     | ...      | ...            | ...         |
+
+In each of these files, the header contains all the parameters of the model used to generate that catalog.
+
+For each planet (row),
+* **target_id** refers to the index of the star in the simulation (e.g. 1 for the first star in the simulation) the planet orbits,
+* **star_id** refers to the index of the star based on where it is in the input stellar catalog (i.e. the row number in the "q1_q17_dr25_gaia_fgk_cleaned.csv" catalog, which can be found in the "plotting/" directory), and
+* **clusterid** is a cluster identifier (i.e., which "cluster" in the system the planet belongs to).
+Note that indexing starts at 1 in Julia. Stars without any planets are not included in these tables.
 
 
 
-## How do I simulate my own (physical and observed) catalogs?
+## To simulate new catalogs from our Maximum AMD model on your own:
 
-### Installation:
+To generate one simulated catalog (physical and observed) with a user defined set of model parameters:
 
-* You will need to first install the [ExoplanetsSysSim](https://github.com/ExoJulia/ExoplanetsSysSim.jl) package and set up some additional repositories; follow the instructions listed in the README of that page.
-* Clone this repository.
+1. Move into the "src/" directory and edit the file "param_common.jl". Set a value for each of the model parameters. For example, to change the eccentricity scale of intrinsic single planets:
+```julia
+add_param_active(sim_param,"sigma_hk", 0.25) # Set the eccentricity (Rayleigh) scale for true singles
 ```
-git clone git@github.com:ExoJulia/SysSimExClusters.git
+**NOTE:** the line:
+```julia
+add_param_fixed(sim_param,"osd_file","dr25fgk_relaxcut_osds.jld2")
 ```
-* Switch to the branch of this repository containing the model you want to simulate from. For example, to simulate models from the most recent paper, do:
+will load a file that requires about 8gb of memory to read. If your machine cannot handle that, you can comment out this line and uncomment the previous line to use a smaller osd file ("dr25fgk_small_osds.jld2"). However, the results will not be as accurate.
+
+2. Move into a directory where you want your simulated catalogs to be saved and run the script "generate_catalogs.jl" in "examples/" in Julia. For example, you can navigate to "examples/", start Julia, and run:
+```julia
+include("generate_catalogs.jl")
 ```
-git checkout He_et_al_2020b
-```
+This will generate the following files:
+* Physical and observed catalogs of planets (and stars) in table format:
+  * "physical_catalog.csv"
+  * "physical_catalog_stars.csv"
+  * "observed_catalog.csv"
+  * "observed_catalog_stars.csv"
 
-### Usage:
+These files are analogous to the simulated catalogs we provide as described above.
 
-Refer to the README of the branch containing the model you want to simulate from for steps.
+In addition, the following files will also be generated:
+* An individual file for the true cluster id's, periods, orbital eccentricities, mutual inclinations, sky inclinations, planet radii, planet masses, stellar radii, and stellar masses, of all the planets per system (and stars with planets) in the physical catalog:
+  * "clusterids_all.out"
+  * "periods_all.out"
+  * "eccentricities_all.out"
+  * "mutualinclinations_all.out"
+  * "inclinations_all.out"
+  * "radii_all.out"
+  * "masses_all.out"
+  * "stellar_radii_with_planets.out"
+  * "stellar_masses_with_planets.out"
 
+The data in these files are the same as those in "physical_catalog.csv", just organized in a different format.
+* An individual file for the observed periods, transit depths, transit durations, stellar radii, and stellar masses of all the planets (and stars with observed planets) in the observed catalog:
+  * "periods.out"
+  * "depths.out"
+  * "durations.out"
+  * "stellar_radii_obs.out"
+  * "stellar_masses_obs.out"
 
-
-## How do I make plots similar to those in the papers?
-
-While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (3.7) code that was written by Matthias He. We provide these Python scripts in the "plotting/" directory but do not fully maintain or document them yet...
-
-
-
-## What if I need help?
-
-Feel free to email Matthias He at myh7@psu.edu!
+The data in these files are the same as those in "observed_catalog.csv", just organized in a different format (sorted into systems with 1, 2, 3, ..., and 8 observed planets). For the simulated catalogs in the SysSimExClusters Simulated Catalogs folder, these files are also provided in the "catalogs_separate.zip" file.
