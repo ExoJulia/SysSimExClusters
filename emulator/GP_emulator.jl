@@ -10,8 +10,8 @@ using Optim
 
 
 function load_data(dims::Int64, data_path::String)
-    data_table_original = CSV.read(joinpath(data_path,"Active_params_distances_table_best100000_every10.txt"), delim=" ")
-    data_table_recomputed = CSV.read(joinpath(data_path,"Active_params_recomputed_distances_table_best100000_every10.txt"), delim=" ", comment="#")
+    data_table_original =  CSV.read(joinpath(data_path,"Active_params_distances_table_best100000_every10.txt"), comment="#")
+    data_table_recomputed = CSV.read(joinpath(data_path,"Active_params_recomputed_distances_table_best100000_every10.txt"), comment="#")
 
     params_names = names(data_table_recomputed)[1:dims]
     dists_names = names(data_table_recomputed)[dims+1:end]
@@ -39,14 +39,14 @@ end
 """
 Transforms a dataset ('params_names' and 'params_array') in place, by performing a sum and difference transformation of two parameters.
 """
-function transform_sum_diff_params!(params_names::Vector{Symbol}, params_array::Array{Float64,2}, i::Int64, j::Int64)
+function transform_sum_diff_params!(params_names::Vector{String}, params_array::Array{Float64,2}, i::Int64, j::Int64)
     @assert length(params_names) == size(params_array, 2)
     dims = length(params_names)
     @assert i != j
     @assert (i <= dims) && (j <= dims)
 
-    sum_params_name = Symbol("sum_"*String(params_names[i])*"_"*String(params_names[j]))
-    diff_params_name = Symbol("diff_"*String(params_names[j])*"_"*String(params_names[i]))
+    sum_params_name = "sum_"*params_names[i]*"_"*params_names[j]
+    diff_params_name = "diff_"*params_names[j]*"_"*params_names[i]
 
     println("Transforming ($(params_names[i]), $(params_names[j])) to ($sum_params_name, $diff_params_name).")
 
@@ -211,29 +211,15 @@ end
 data_path = "GP_files"
 prior_bounds = nothing
 
-
-
-# Clustered_P_R_fswp:
-#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Split_stars/Clustered_P_R_fswp/Params12_AD/durations_AD/GP_files"
-
 # Transformed:
-#hparams_best = [2.7, 0.2, 0.2, 0.4, 1., 1., 1., 1.5, 0.02, 30., 1., 0.2, 0.1]
-#prior_bounds = [(0.1, 0.7), (0.3, 0.9), (0.5, 2.5), (-1., 2.), (-0.8, 1.2), (-2.5, -0.5), (-6., -3.), (0., 0.04), (0., 90.), (0., 2.4), (0.1, 0.5), (0.1, 0.3)]
-
-
-
-# Clustered_P_R_fswp_bprp:
-#data_path = "/Users/hematthi/Documents/GradSchool/Eric_Ford_Research/ACI/Model_Optimization/Split_stars/Clustered_P_R_fswp_bprp/Params13_AD/durations_AD/GP_files"
-
-# Transformed:
-#hparams_best = [2.7, 0.2, 0.2, 0.6, 0.4, 1., 1., 1., 1.5, 0.02, 30., 1., 0.2, 0.1]
-#prior_bounds = [(0.1, 0.7), (0.3, 0.9), (0., 1.), (0.5, 2.5), (-1., 2.), (-0.8, 1.2), (-2.5, -0.5), (-6., -3.), (0., 0.04), (0., 90.), (0., 2.4), (0.1, 0.5), (0.1, 0.3)]
+hparams_best = [2.7, 0.2, 1., 1., 1.5, 3., 1., 0.5, 1., 0.2, 0.15, 0.15]
+prior_bounds = [(0.6, 1.), (-0.6, 2.), (-1., 2.), (-1.5, 3.), (6., 15.), (-0.8, 1.6), (-2., -0.5), (-6., -3.), (0., 0.5), (0.1, 0.5), (0.1, 0.5)]
 
 
 
 
 
-dims = 13
+dims = 11
 mean_f = 75. # KS
 #mean_f = 150. # AD
 GP_model = train_GP_emulator(; dims=dims, data_path=data_path, f_err=2.7, n_train=2000, n_cv=2000, mean_f=mean_f, kernel=kernel_SE_ndims, hparams_best=hparams_best, optimize_hparams=false, make_plots=false)

@@ -16,7 +16,7 @@ include("GP_emulator.jl")
 """
 Evaluates 'predict_model_from_uniform_prior_until_accept_n_points_parallel' given a dataset and GP model (i.e. kernel and hyperparameters) to draw 'n_points' with GP mean and std better than 'max_mean' and 'max_std' and save the results as a table in a CSV file.
 """
-function draw_points_parallel_with_GP_and_save(n_points::Int64; params_names::Array{Symbol,1}, xdata::Array{Float64,2}, mean_f::Float64, ydata::Vector{Float64}, ydata_err::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, prior_bounds::Union{Array{Tuple{Float64,Float64},1}, Nothing}=nothing, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf, save_path::String="", run_number::Int64=1)
+function draw_points_parallel_with_GP_and_save(n_points::Int64; params_names::Array{String,1}, xdata::Array{Float64,2}, mean_f::Float64, ydata::Vector{Float64}, ydata_err::Vector{Float64}, kernel::Function, hparams::Vector{Float64}, prior_bounds::Union{Array{Tuple{Float64,Float64},1}, Nothing}=nothing, max_mean::Float64=Inf, max_std::Float64=Inf, max_post::Float64=Inf, save_path::String="", run_number::Int64=1)
     @assert size(xdata, 2) == length(params_names)
     @assert size(xdata, 1) == length(ydata) == length(ydata_err)
     @assert n_points > 0
