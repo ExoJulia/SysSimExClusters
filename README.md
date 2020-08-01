@@ -7,9 +7,10 @@ This repository provides a comprehensive forward modelling framework for studyin
 We develop and provide several *statistical* models for describing the intrinsic planetary systems, their architectures, and the correlations within multi-planet systems, using the Kepler population of exoplanet candidates. Our specific models are described in the following papers:
 
 * He, Ford, and Ragozzine (2019) (Paper I): \[published in [MNRAS](https://doi.org/10.1093/mnras/stz2869)\] \[[arXiv](https://arxiv.org/abs/1907.07773)\]
-* He, Ford, and Ragozzine (2020) (Paper II): \[submitted to MNRAS\] \[[arXiv](https://arxiv.org/abs/2003.04348)\]
+* He, Ford, and Ragozzine (2020) (Paper II): \[[arXiv](https://arxiv.org/abs/2003.04348)\]
+* He et al (2020b) (Paper III): \[submitted to AJ\] \[[arXiv](https://arxiv.org/abs/2007.14473)\]
 
-**Important:** We have a separate code branch for each paper (e.g. "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020"); these should be used if you want to run our code instead of the master branch, which is actively being updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
+**Important:** We have a separate code branch for each paper (e.g. "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020", "He_et_al_2020b"); these should be used if you want to run our code instead of the master branch, which is actively being updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
 
 
 
@@ -33,9 +34,9 @@ Refer to the README of the branch specific to each paper for complete details on
 ```
 git clone git@github.com:ExoJulia/SysSimExClusters.git
 ```
-* Switch to the branch of this repository containing the model you want to simulate from. For example, to simulate models from Paper II, do:
+* Switch to the branch of this repository containing the model you want to simulate from. For example, to simulate models from the most recent paper, do:
 ```
-git checkout He_Ford_Ragozzine_2020
+git checkout He_et_al_2020b
 ```
 
 ### Usage:
