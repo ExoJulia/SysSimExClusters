@@ -4,7 +4,7 @@ function save_physical_catalog(cat_phys::KeplerPhysicalCatalog, sim_param::SimPa
 
     f = open(joinpath(save_path, "physical_catalog$run_number.csv"), "w")
     write_model_params(f, sim_param)
-    println(f, "target_id,star_id,planet_mass,planet_radius,clusterid,period,ecc,incl_mut,incl,star_mass,star_radius")
+    println(f, "target_id,star_id,planet_mass,planet_radius,clusterid,period,ecc,incl_mut,incl,omega,asc_node,mean_anom,star_mass,star_radius")
     for (i,targ) in enumerate(cat_phys.target)
         if length(targ.sys) > 1 #this should never happen
             println("There is more than one system for a given target? Check index: ", i)
@@ -16,7 +16,7 @@ function save_physical_catalog(cat_phys::KeplerPhysicalCatalog, sim_param::SimPa
             for (j,planet) in enumerate(sys.planet)
                 incl_pl, Ω_pl = sys.orbit[j].incl, sys.orbit[j].asc_node
                 inclmut_pl = calc_incl_spherical_cosine_law(incl_ref, incl_pl, Ω_pl-Ω_ref)
-                println(f, join([i, sys.star.id, planet.mass, planet.radius, planet.id, sys.orbit[j].P, sys.orbit[j].ecc, inclmut_pl, sys.orbit[j].incl, sys.star.mass, sys.star.radius], ","))
+                println(f, join([i, sys.star.id, planet.mass, planet.radius, planet.id, sys.orbit[j].P, sys.orbit[j].ecc, inclmut_pl, sys.orbit[j].incl, sys.orbit[j].omega, sys.orbit[j].asc_node, sys.orbit[j].mean_anom, sys.star.mass, sys.star.radius], ","))
             end
         end
     end
@@ -215,12 +215,12 @@ function save_observed_catalog(cat_phys::KeplerPhysicalCatalog, cat_obs::KeplerO
 
     f = open(joinpath(save_path, "observed_catalog$run_number.csv"), "w")
     write_model_params(f, sim_param)
-    println(f, "target_id,star_id,period,depth,duration,star_mass,star_radius")
+    println(f, "target_id,star_id,period,period_err,depth,depth_err,duration,duration_err,star_mass,star_radius")
     for num_pl_in_sys in 1:length(summary_stat.cache["idx_n_tranets"])
         num_targets = length(summary_stat.cache["idx_n_tranets"][num_pl_in_sys])
         for (i,j) in enumerate(summary_stat.cache["idx_n_tranets"][num_pl_in_sys])
             for k in 1:num_pl_in_sys
-                println(f, join([j, cat_phys.target[j].sys[1].star.id, map(ExoplanetsSysSim.period, cat_obs.target[j].obs)[k], map(ExoplanetsSysSim.depth, cat_obs.target[j].obs)[k], map(ExoplanetsSysSim.duration, cat_obs.target[j].obs)[k], cat_obs.target[j].star.mass, cat_obs.target[j].star.radius], ","))
+                println(f, join([j, cat_phys.target[j].sys[1].star.id, map(ExoplanetsSysSim.period, cat_obs.target[j].obs)[k], map(ExoplanetsSysSim.period, cat_obs.target[j].sigma)[k], map(ExoplanetsSysSim.depth, cat_obs.target[j].obs)[k], map(ExoplanetsSysSim.depth, cat_obs.target[j].sigma)[k], map(ExoplanetsSysSim.duration, cat_obs.target[j].obs)[k], map(ExoplanetsSysSim.duration, cat_obs.target[j].sigma)[k], cat_obs.target[j].star.mass, cat_obs.target[j].star.radius], ","))
             end
         end
     end
