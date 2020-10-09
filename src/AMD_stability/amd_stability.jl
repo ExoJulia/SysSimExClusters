@@ -432,7 +432,7 @@ function relative_AMD_MMR_overlap(μ1::Real, μ2::Real, a1::Real, a2::Real)
     ϵ = μ1+μ2
     
     C_Hill = γ*√α + 1 - (γ+1)^(3/2)*√(α/(γ+α)*(1+(9ϵ)^(2/3)*γ/(1+γ)^2) )
-    return C_Hill
+    return max(C_Hill,0.)
 end
 
 """
