@@ -1,7 +1,7 @@
 #=
 Date:   June 15, 2019
 Author: Daniel Carrera (dcarrera@gmail.com)
-Modified by: Matthias Yang He
+Modified by: Matthias Yang He, Antoine Petit
 
 Based on:
 Laskar & Petit (2017): https://arxiv.org/pdf/1703.07125.pdf
@@ -410,7 +410,30 @@ function critical_relative_AMD(μ1::Real, μ2::Real, a1::Real, a2::Real)
     return min(C_coll, C_mmr)
 end
 
+"""
+    relative_AMD_Hillstability(μ1, μ2, a1, a2)
 
+Compute the critical (minimum) relative AMD for Hill stability, based on Equation 26 in Petit, Laskar, & Boue (2018).
+
+# Arguments:
+- `μ1::Real`: planet/star mass ratio of inner planet.
+- `μ2::Real`: planet/star mass ratio of outer planet.
+- `a1::Real`: semimajor axis of inner planet.
+- `a2::Real`: semimajor axis of outer planet.
+
+# Returns:
+- `C_Hill::Float64`: critical relative AMD for Hill stability.
+"""
+function relative_AMD_MMR_overlap(μ1::Real, μ2::Real, a1::Real, a2::Real)
+    @assert(a1 <= a2)
+
+    γ = μ1/μ2
+    α = a1/a2
+    ϵ = μ1+μ2
+    
+    C_Hill = γ*√α + 1 - (γ+1)^(3/2)*√(α/(γ+α)*(1+(9ϵ)^(2/3)*γ/(1+γ)^2) )
+    return max(C_Hill,0.)
+end
 
 """
 Determines the AMD stability of a planetary system using the
