@@ -306,6 +306,32 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
 
     inclskylist, Ωskylist = calc_sky_incl_Ω_orbits_given_system_vector(inclmutlist, Ωlist, vec_sys)
 
+    # At this point, the "mutual inclinations" (inclmutlist) and ascending nodes (Ωlist) are relative to the reference plane, but that is NOT the same as the system invariable plane
+    # To calculate true mutual inclinations relative to the system invariable plane:
+    if num_pl > 1
+        vec_orb_list = [calc_orbit_vector_given_system_vector(inclmutlist[i], Ωlist[i], vec_sys) for i in 1:num_pl] # unit normals of each planet's orbital plane
+
+        blist = alist .* sqrt.(1 .- ecclist.^2) # semi-minor axis of each planet's orbit
+        Llist = masslist .* blist .* sqrt.(ExoplanetsSysSim.G_mass_sun_in_mks * star.mass ./ alist) # angular momentum (magnitude) of each planet's orbit, as calculated from the Vis-viva equation
+        Lvec_sys = sum(Llist .* vec_orb_list) # angular momentum vector of the system
+        vec_invariable = Lvec_sys ./ norm(Lvec_sys) # unit normal to system invariable plane
+
+        inclinvariablelist = [calc_angle_between_vectors(vec_invariable, vec_orb) for vec_orb in vec_orb_list] # mutual inclinations relative to system invariable plane
+        Ωinvariablelist = [calc_Ω_in_plane(vec_orb, vec_invariable) for vec_orb in vec_orb_list] # ascending nodes relative to system invariable plane
+    else
+        Lvec_sys = vec_sys
+        vec_invariable = vec_sys
+        inclinvariablelist = inclmutlist
+        Ωinvariablelist = Ωlist
+    end
+
+    incl_invariable = calc_angle_between_vectors(vec_z, vec_invariable) # inclination of system invariable plane (rad) relative to sky plane
+    Ω_invariable = calc_Ω_in_sky_plane(vec_invariable) # argument of ascending node of system invariable plane (rad) relative to sky plane
+
+    #AMD_crit = critical_AMD_system(μlist, alist)
+    #AMD_tot_assigned = sum(AMDlist)
+    #AMD_tot = total_AMD_system(μlist, alist, ecclist, inclinvariablelist)[1]
+
     #= For debugging:
     println("P (d): ", Plist)
     println("R (R⊕): ", Rlist ./ ExoplanetsSysSim.earth_radius)
@@ -329,7 +355,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
         pl[i] = Planet(Rlist[i], masslist[i], clusteridlist[i])
         orbit[i] = Orbit(Plist[i], ecclist[i], inclskylist[i], ωlist[i], Ωskylist[i], meananomlist[i])
     end
-    sys_ref_plane = SystemPlane(incl_sys, Ω_sys)
+    sys_ref_plane = SystemPlane(incl_invariable, Ω_invariable)
 
     return PlanetarySystem(star, pl, orbit, sys_ref_plane)
 end

@@ -37,13 +37,16 @@ end
 calc_angle_between_vectors(A::Vector{Float64}, B::Vector{Float64}) = acos(dot(A,B)/(norm(A)*norm(B))) # angle between two vectors
 
 """
-Calculate the orientation of a vector in the x-y plane (normal to z-axis).
+Calculate the orientation of a vector in a given plane (where 'nplane' is the unit normal vector to the plane).
 """
-function calc_Ω_in_sky_plane(h::Vector{Float64})
-    n = [-h[2],h[1],0.]
+function calc_Ω_in_plane(h::Vector{Float64}, nplane::Vector{Float64})
+    n = cross(nplane, h)
     Ω = acos(n[1]/norm(n))
     n[2] >= 0 ? Ω : 2π - Ω
 end
+
+# Calculate the orientation of a vector in the x-y plane (normal to z-axis).
+calc_Ω_in_sky_plane(h::Vector{Float64}) = calc_Ω_in_plane(h, [0.,0.,1.])
 
 """
 Calculate the angle between two orbits using the spherical law of Cosines.
