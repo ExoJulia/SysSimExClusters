@@ -311,7 +311,7 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     if num_pl > 1
         vec_orb_list = [calc_orbit_vector_given_system_vector(inclmutlist[i], Ωlist[i], vec_sys) for i in 1:num_pl] # unit normals of each planet's orbital plane
 
-        blist = alist .* sqrt.(1 .- ecclist.^2) # semi-minor axis of each planet's orbit
+        blist = alist .* sqrt.((1 .- ecclist).*(1 .+ ecclist)) # semi-minor axis of each planet's orbit
         Llist = masslist .* blist .* sqrt.(ExoplanetsSysSim.G_mass_sun_in_mks * star.mass ./ alist) # angular momentum (magnitude) of each planet's orbit, as calculated from the Vis-viva equation
         Lvec_sys = sum(Llist .* vec_orb_list) # angular momentum vector of the system
         vec_invariable = Lvec_sys ./ norm(Lvec_sys) # unit normal to system invariable plane

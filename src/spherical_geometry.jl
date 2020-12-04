@@ -141,7 +141,7 @@ function calc_incl_Ω_relative_to_system_invariable_plane(sys::PlanetarySystem)
     else
         vec_orb_list = map(i -> calc_orbit_vector_given_system_vector(sys.orbit[i].incl, sys.orbit[i].asc_node, [0.,0.,1.]), 1:n) # unit normals of each planet's orbital plane
         alist = map(i -> semimajor_axis(sys.orbit[i].P, sys.star.mass), 1:n)
-        blist = map(i -> alist[i]*sqrt(1 - sys.orbit[i].ecc^2), 1:n) # semi-minor axis of each planet's orbit
+        blist = map(i -> alist[i]*sqrt((1 - sys.orbit[i].ecc)*(1 + sys.orbit[i].ecc)), 1:n) # semi-minor axis of each planet's orbit
         Llist = map(i -> sys.planet[i].mass * blist[i] * sqrt(ExoplanetsSysSim.G_mass_sun_in_mks*sys.star.mass / alist[i]), 1:n) # angular momentum (magnitude) of each planet's orbit, as calculated from the Vis-viva equation
         Lvec_sys = sum(Llist .* vec_orb_list) # angular momentum vector of the system
         vec_invariable = Lvec_sys ./ norm(Lvec_sys) # unit normal to system invariable plane
