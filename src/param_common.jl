@@ -21,7 +21,13 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     add_param_fixed(sim_param,"osd_file","dr25fgk_relaxcut_osds.jld2") # WARNING: need 8gb of memory to read this file
 
     # For generating planetary system properties:
-    add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered) # For Non-clustered model: "generate_planetary_system_non_clustered"
+    add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered)
+    #add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered_conditional)
+    add_param_fixed(sim_param,"cond_period_min", 8.0)
+    add_param_fixed(sim_param,"cond_period_max", 12.0)
+    add_param_fixed(sim_param,"cond_radius_min", 1.8)
+    add_param_fixed(sim_param,"cond_radius_max", 2.0)
+    add_param_fixed(sim_param,"cond_also_transits", true)
 
     add_param_active(sim_param,"f_stars_with_planets_attempted_color_slope", 0.9)
     add_param_active(sim_param,"f_stars_with_planets_attempted_at_med_color", 0.88)
@@ -109,10 +115,15 @@ function write_model_params(f, sim_param::SimParam)
     println(f, "# generate_num_clusters: ", string(get_function(sim_param,"generate_num_clusters")))
     println(f, "# log_rate_clusters: ", get_real(sim_param,"log_rate_clusters"))
     println(f, "# max_clusters_in_sys: ", get_int(sim_param,"max_clusters_in_sys"))
-    if string(get_function(sim_param,"generate_planetary_system")) == "generate_planetary_system_clustered"
-        println(f, "# generate_num_planets_in_cluster: ", string(get_function(sim_param,"generate_num_planets_in_cluster")))
-        println(f, "# log_rate_planets_per_cluster: ", get_real(sim_param,"log_rate_planets_per_cluster"))
-        println(f, "# max_planets_in_clusters: ", get_int(sim_param,"max_planets_in_cluster"))
+    println(f, "# generate_num_planets_in_cluster: ", string(get_function(sim_param,"generate_num_planets_in_cluster")))
+    println(f, "# log_rate_planets_per_cluster: ", get_real(sim_param,"log_rate_planets_per_cluster"))
+    println(f, "# max_planets_in_clusters: ", get_int(sim_param,"max_planets_in_cluster"))
+    if string(get_function(sim_param,"generate_planetary_system")) == "generate_planetary_system_clustered_conditional"
+        println(f, "# cond_period_min: ", get_real(sim_param,"cond_period_min"))
+        println(f, "# cond_period_max: ", get_real(sim_param,"cond_period_max"))
+        println(f, "# cond_radius_min: ", get_real(sim_param,"cond_radius_min"))
+        println(f, "# cond_radius_max: ", get_real(sim_param,"cond_radius_max"))
+        println(f, "# cond_also_transits: ", get_bool(sim_param,"cond_also_transits"))
     end
 
     if string(get_function(sim_param,"generate_periods")) == "generate_periods_power_law"

@@ -107,44 +107,13 @@ function generate_num_planets_in_cluster_ZTP(s::Star, sim_param::SimParam)
     return draw_truncated_poisson(lambda, min=1, max=max_planets_in_cluster, n=1)[1]
 end
 
-function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)
-
-    # To include a dependence on stellar color for the fraction of stars with planets:
-    #
-    global stellar_catalog
-    star_color = stellar_catalog[star.id, :bp_rp] - stellar_catalog[star.id, :e_bp_min_rp_interp]
-    f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
-    f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
-    med_color = get_real(sim_param, "med_color")
-    @assert(0 <= f_stars_with_planets_attempted_at_med_color <= 1)
-
-    f_stars_with_planets_attempted = f_stars_with_planets_attempted_color_slope*(star_color - med_color) + f_stars_with_planets_attempted_at_med_color
-    f_stars_with_planets_attempted = min(f_stars_with_planets_attempted, 1.)
-    f_stars_with_planets_attempted = max(f_stars_with_planets_attempted, 0.)
-    @assert(0 <= f_stars_with_planets_attempted <= 1)
-    #
-
-    # Load functions and model parameters for drawing planet properties:
-    #=
-    if haskey(sim_param, "f_stars_with_planets_attempted")
-        f_stars_with_planets_attempted = get_real(sim_param, "f_stars_with_planets_attempted")
-        @assert(0 <= f_stars_with_planets_attempted <= 1)
-    else
-        f_stars_with_planets_attempted = 1.
-    end
-    =#
+function draw_planetary_system_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)
 
     generate_num_clusters = get_function(sim_param, "generate_num_clusters")
     generate_num_planets_in_cluster = get_function(sim_param, "generate_num_planets_in_cluster")
     power_law_P = get_real(sim_param, "power_law_P")
     min_period = get_real(sim_param, "min_period")
     max_period = get_real(sim_param, "max_period")
-
-    # Decide whether to assign a planetary system to the star at all:
-    if rand() > f_stars_with_planets_attempted
-        #println("Star not assigned a planetary system.")
-        return PlanetarySystem(star)
-    end
 
     # Assign a reference (invariant) plane for the system:
     # NOTE: aligning sky plane to x-y plane (z-axis is unit normal)
@@ -358,4 +327,99 @@ function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimP
     sys_ref_plane = SystemPlane(incl_invariable, Ω_invariable)
 
     return PlanetarySystem(star, pl, orbit, sys_ref_plane)
+end
+
+function calc_fraction_of_stars_with_planets(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)
+    # To include a dependence on stellar color for the fraction of stars with planets:
+    #
+    global stellar_catalog
+    star_color = stellar_catalog[star.id, :bp_rp] - stellar_catalog[star.id, :e_bp_min_rp_interp]
+    f_stars_with_planets_attempted_color_slope = get_real(sim_param, "f_stars_with_planets_attempted_color_slope")
+    f_stars_with_planets_attempted_at_med_color = get_real(sim_param, "f_stars_with_planets_attempted_at_med_color")
+    med_color = get_real(sim_param, "med_color")
+    @assert(0 <= f_stars_with_planets_attempted_at_med_color <= 1)
+
+    f_stars_with_planets_attempted = f_stars_with_planets_attempted_color_slope*(star_color - med_color) + f_stars_with_planets_attempted_at_med_color
+    f_stars_with_planets_attempted = min(f_stars_with_planets_attempted, 1.)
+    f_stars_with_planets_attempted = max(f_stars_with_planets_attempted, 0.)
+    @assert(0 <= f_stars_with_planets_attempted <= 1)
+    #
+
+    # Load functions and model parameters for drawing planet properties:
+    #=
+    if haskey(sim_param, "f_stars_with_planets_attempted")
+        f_stars_with_planets_attempted = get_real(sim_param, "f_stars_with_planets_attempted")
+        @assert(0 <= f_stars_with_planets_attempted <= 1)
+    else
+        f_stars_with_planets_attempted = 1.
+    end
+    =#
+
+    return f_stars_with_planets_attempted
+end
+
+function generate_planetary_system_clustered(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)
+
+    # Decide whether to assign a planetary system to the star at all:
+    f_swpa = calc_fraction_of_stars_with_planets(star, sim_param; verbose=verbose)
+    if rand() > f_swpa
+        #println("Star not assigned a planetary system.")
+        return PlanetarySystem(star)
+    end
+
+    # If get to this point, will try to draw a planetary system:
+    ps = draw_planetary_system_clustered(star, sim_param; verbose=verbose)
+    return ps
+end
+
+function has_conditional_planet(ps::PlanetarySystem, sim_param::SimParam)
+
+    # Check if system has a planet in the conditional period and radius range:
+    cond_period_min = get_real(sim_param, "cond_period_min")
+    cond_period_max = get_real(sim_param, "cond_period_max")
+    cond_radius_min = get_real(sim_param, "cond_radius_min")
+    cond_radius_max = get_real(sim_param, "cond_radius_max")
+    cond_also_transits = get_bool(sim_param, "cond_also_transits")
+
+    found_cond_planet = false
+    for pl in 1:length(ps.planet)
+        period = ps.orbit[pl].P
+        radius = ps.planet[pl].radius / ExoplanetsSysSim.earth_radius
+        in_period_range = cond_period_min <= period <= cond_period_max
+        in_radius_range = cond_radius_min <= radius <= cond_radius_max
+        if in_period_range && in_radius_range
+            found_cond_planet = cond_also_transits ? ExoplanetsSysSim.does_planet_transit(ps, pl) : true
+        end
+    end
+    return found_cond_planet
+end
+
+function generate_planetary_system_clustered_conditional(star::StarAbstract, sim_param::SimParam; verbose::Bool=false)
+
+    # Decide whether to assign a planetary system to the star at all:
+    f_swpa = calc_fraction_of_stars_with_planets(star, sim_param; verbose=verbose)
+    if rand() > f_swpa
+        #println("Star not assigned a planetary system.")
+        return PlanetarySystem(star)
+    end
+
+    # If get to this point, will try to draw a planetary system:
+    local ps
+
+    max_attempts_cond = 10000
+    attempts_cond = 0
+    found_cond_planet = false
+    while !found_cond_planet && attempts_cond < max_attempts_cond
+        attempts_cond += 1
+        ps = draw_planetary_system_clustered(star, sim_param; verbose=verbose)
+        found_cond_planet = has_conditional_planet(ps, sim_param)
+    end
+    if attempts_cond == max_attempts_cond
+        ps = PlanetarySystem(star)
+        @info("Failed to generate a system with a conditional planet after $max_attempts_cond attempts; returning just the star.")
+    else
+        @info("Generated system with a conditional planet after $attempts_cond attempts.")
+    end
+
+    return ps
 end
