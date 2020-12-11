@@ -25,8 +25,8 @@ function setup_sim_param_model(args::Vector{String} = Array{String}(undef, 0)) #
     #add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered_conditional)
     add_param_fixed(sim_param,"cond_period_min", 8.0)
     add_param_fixed(sim_param,"cond_period_max", 12.0)
-    add_param_fixed(sim_param,"cond_radius_min", 1.8)
-    add_param_fixed(sim_param,"cond_radius_max", 2.0)
+    add_param_fixed(sim_param,"cond_radius_min", 1.8*ExoplanetsSysSim.earth_radius)
+    add_param_fixed(sim_param,"cond_radius_max", 2.0*ExoplanetsSysSim.earth_radius)
     add_param_fixed(sim_param,"cond_also_transits", true)
 
     add_param_active(sim_param,"f_stars_with_planets_attempted_color_slope", 0.9)
@@ -121,8 +121,8 @@ function write_model_params(f, sim_param::SimParam)
     if string(get_function(sim_param,"generate_planetary_system")) == "generate_planetary_system_clustered_conditional"
         println(f, "# cond_period_min: ", get_real(sim_param,"cond_period_min"))
         println(f, "# cond_period_max: ", get_real(sim_param,"cond_period_max"))
-        println(f, "# cond_radius_min: ", get_real(sim_param,"cond_radius_min"))
-        println(f, "# cond_radius_max: ", get_real(sim_param,"cond_radius_max"))
+        println(f, "# cond_radius_min (R_earth): ", get_real(sim_param,"cond_radius_min")/ExoplanetsSysSim.earth_radius)
+        println(f, "# cond_radius_max (R_earth): ", get_real(sim_param,"cond_radius_max")/ExoplanetsSysSim.earth_radius)
         println(f, "# cond_also_transits: ", get_bool(sim_param,"cond_also_transits"))
     end
 
