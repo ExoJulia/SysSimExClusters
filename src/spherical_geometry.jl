@@ -34,7 +34,8 @@ function calc_rotation_matrix_A_to_B(A::Vector{Float64}, B::Vector{Float64})
     return R
 end
 
-calc_angle_between_vectors(A::Vector{Float64}, B::Vector{Float64}) = acos(dot(A,B)/(norm(A)*norm(B))) # angle between two vectors
+#calc_angle_between_vectors(A::Vector{Float64}, B::Vector{Float64}) = acos(dot(A,B)/(norm(A)*norm(B))) # angle between two vectors; WARNING: can fail if the angle is too small (near parallel vectors)!
+calc_angle_between_vectors(A::Vector{Float64}, B::Vector{Float64}) = 2*atan(norm(A/norm(A) - B/norm(B)) / norm(A/norm(A) + B/norm(B))) # more stable method for computing angle between two vectors; from pg. 15 of https://people.eecs.berkeley.edu/%7Ewkahan/MathH110/Cross.pdf
 
 """
 Calculate the orientation of a vector in a given plane (where 'nplane' is the unit normal vector to the plane).
