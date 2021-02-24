@@ -379,15 +379,19 @@ function has_conditional_planet(ps::PlanetarySystem, sim_param::SimParam)
     cond_period_max = get_real(sim_param, "cond_period_max")
     cond_radius_min = get_real(sim_param, "cond_radius_min")
     cond_radius_max = get_real(sim_param, "cond_radius_max")
+    cond_mass_min = get_real(sim_param, "cond_mass_min")
+    cond_mass_max = get_real(sim_param, "cond_mass_max")
     cond_also_transits = get_bool(sim_param, "cond_also_transits")
 
     found_cond_planet = false
     for pl in 1:length(ps.planet)
         period = ps.orbit[pl].P
         radius = ps.planet[pl].radius
+        mass = ps.planet[pl].mass
         in_period_range = cond_period_min <= period <= cond_period_max
         in_radius_range = cond_radius_min <= radius <= cond_radius_max
-        if in_period_range && in_radius_range
+        in_mass_range = cond_mass_min <= mass <= cond_mass_max
+        if in_period_range && in_radius_range && in_mass_range
             found_cond_planet = cond_also_transits ? ExoplanetsSysSim.does_planet_transit(ps, pl) : true
         end
     end
