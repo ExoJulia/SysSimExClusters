@@ -7,14 +7,16 @@ This repository provides a comprehensive forward modelling framework for studyin
 We develop and provide several *statistical* models for describing the intrinsic planetary systems, their architectures, and the correlations within multi-planet systems, using the Kepler population of exoplanet candidates. Our specific models are described in the following papers:
 
 * [He, Ford, and Ragozzine (2019), MNRAS, 490, 4575 (30pp)](https://ui.adsabs.harvard.edu/abs/2019MNRAS.490.4575H/abstract) ("Paper I") \[[arXiv](https://arxiv.org/abs/1907.07773)\]
-* [He, Ford, and Ragozzine (2021), AJ, 161, 16 (24pp)](https://ui.adsabs.harvard.edu/abs/2021AJ....161...16H/abstract) ("Paper II") \[[arXiv](https://arxiv.org/abs/2003.04348)\]
-* [He et al (2020b), AJ, 160, 276 (38pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....160..276H/abstract) ("Paper III") \[[arXiv](https://arxiv.org/abs/2007.14473)\]
+* [He, Ford, and Ragozzine (2021)\*, AJ, 161, 16 (24pp)](https://ui.adsabs.harvard.edu/abs/2021AJ....161...16H/abstract) ("Paper II") \[[arXiv](https://arxiv.org/abs/2003.04348)\]
+* [He et al (2020), AJ, 160, 276 (38pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....160..276H/abstract) ("Paper III") \[[arXiv](https://arxiv.org/abs/2007.14473)\]
+
+\*Paper II was published shortly after Paper III due to an extended referee process, but the most updated model is the one described in Paper III.
 
 In addition to these papers describing the new models, the simulated catalogs from these models have been directly used for several other publications:
 
 * [Gilbert and Fabrycky (2020), AJ, 159, 281 (17pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....159..281G/abstract) \[[arXiv](https://arxiv.org/abs/2003.11098)\]
 * Millholland, He, Ford, et al. (2021), submitted to AAS Journals
-* He, Ford, and Ragozzine (2021), submitted to AAS Journals
+* He, Ford, and Ragozzine (2021b), submitted to AAS Journals
 
 **Important:** We have a separate code branch for each paper (e.g. "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020", "He_et_al_2020b"); these should be used if you want to run our code instead of the master branch, which is actively being updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
 
