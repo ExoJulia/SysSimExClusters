@@ -1,64 +1,51 @@
 # SysSimExClusters
 
-This repository provides a comprehensive forward modelling framework for studying planetary systems.
-
-<center><img src="/best_models/Clustered_P_R_observed.gif" alt="Best fit clustered models" width="800"/></center>  
-
-We develop and provide several *statistical* models for describing the intrinsic planetary systems, their architectures, and the correlations within multi-planet systems, using the Kepler population of exoplanet candidates. Our specific models are described in the following papers:
-
-* [He, Ford, and Ragozzine (2019), MNRAS, 490, 4575 (30pp)](https://ui.adsabs.harvard.edu/abs/2019MNRAS.490.4575H/abstract) ("Paper I") \[[arXiv](https://arxiv.org/abs/1907.07773)\]
-* [He, Ford, and Ragozzine (2021)\*, AJ, 161, 16 (24pp)](https://ui.adsabs.harvard.edu/abs/2021AJ....161...16H/abstract) ("Paper II") \[[arXiv](https://arxiv.org/abs/2003.04348)\]
-* [He et al (2020), AJ, 160, 276 (38pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....160..276H/abstract) ("Paper III") \[[arXiv](https://arxiv.org/abs/2007.14473)\]
-
-\*Paper II was published shortly after Paper III due to an extended referee process, but the most updated model is the one described in Paper III.
-
-In addition to these papers describing the new models, the simulated catalogs from these models have been directly used for several other publications:
-
-* [Gilbert and Fabrycky (2020), AJ, 159, 281 (17pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....159..281G/abstract) \[[arXiv](https://arxiv.org/abs/2003.11098)\]
-* Millholland, He, Ford, et al. (2021), submitted to AAS Journals
-* He, Ford, and Ragozzine (2021b), submitted to AAS Journals
-
-**Important:** We have a separate code branch for each paper (e.g. "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020", "He_et_al_2020b"); these should be used if you want to run our code instead of the master branch, which is actively being updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
+He, Ford, & Ragozzine (2021b), submitted to AAS Journals
 
 
+This paper utilizes the same model ("Maximum AMD model") from "Paper III"; refer to that paper for a full description of the model.
 
-## How do I use these models?
-
-We provide a large set of simulated catalogs from our models in the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder. If you simply wish to use these simulated catalogs as examples of our models, then no installation is required! Simply download any of these tables and use them for your own science. To be able to use them, you must understand that we provide two types of catalogs:
-
-* *Physical catalog:* a set of intrinsic, physical planetary systems (before any observations; contains properties like the true orbital periods, planet radii, etc.)
-* *Observed catalog:* a set of transiting and detected planet candidates derived from a *physical catalog* (after a Kepler-like mission; contains properties like the measured orbital periods, transit depths, etc.)
-
-Refer to the README of the branch specific to each paper for complete details on what each set of catalogs contains.
+Here, we provide a framework for users to simulate planetary systems *conditioned* on a given planet (i.e. within a given period, radius, and mass range for the properties of the chosen planet). For example, you may have a system with a known transiting planet of measured period and radius, and wish to compute the conditional distribution of planets in such systems.
 
 
+## To simulate systems conditioned on a given planet of your choosing:
 
-## How do I simulate my own (physical and observed) catalogs?
+The procedure for generating simulated catalogs (physical and observed pairs) with a user defined set of model parameters is the same as before. Refer to the Paper III branch ("He_et_al_2020b") for a description of the procedure and the simulation outputs, and refer to the paper itself for a description of all the model parameters.
 
-### Installation:
+To generate a simulated catalog only containing systems with a conditioned planet:
 
-* You will need to first install the [ExoplanetsSysSim](https://github.com/ExoJulia/ExoplanetsSysSim.jl) package and set up some additional repositories; follow the instructions listed in the README of that page.
-* Clone this repository.
-```
-git clone git@github.com:ExoJulia/SysSimExClusters.git
-```
-* Switch to the branch of this repository containing the model you want to simulate from. For example, to simulate models from the most recent paper, do:
-```
-git checkout He_et_al_2020b
+1. Move into the "src/" directory and edit the file "param_common.jl". Make sure the `generate_planetary_system_clustered_conditional` option is selected:
+```julia
+#add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered) # this is for simulating a full catalog without conditioning (e.g. for previous papers)
+add_param_fixed(sim_param,"generate_planetary_system", generate_planetary_system_clustered_conditional) # this is for simulating a catalog conditioned on a given planet
 ```
 
-### Usage:
+2. Set a range for the period, radius, and mass of the conditioned planet:
+```julia
+add_param_fixed(sim_param,"cond_period_min", 8.) # minimum period for the conditioned planets
+add_param_fixed(sim_param,"cond_period_min", 12.) # maximum period for the conditioned planets
+add_param_fixed(sim_param,"cond_radius_min", 0.9*ExoplanetsSysSim.earth_radius) # minimum radius for the conditioned planets
+add_param_fixed(sim_param,"cond_radius_max", 1.1*ExoplanetsSysSim.earth_radius) # maximum radius for the conditioned planets
+add_param_fixed(sim_param,"cond_mass_min", 0.5*ExoplanetsSysSim.earth_mass) # minimum mass for the conditioned planets
+add_param_fixed(sim_param,"cond_mass_max", 2.0*ExoplanetsSysSim.earth_mass) # maximum mass for the conditioned planets
+```
+**Note**: the ranges for the planet radii and masses are in solar units, and thus one should multiply by `ExoplanetsSysSim.earth_radius` and `ExoplanetsSysSim.earth_mass` respectively if entering values in Earth units, as shown in this example.
 
-Refer to the README of the branch containing the model you want to simulate from for steps.
+If you do not want to condition on one or more properties (e.g. planet mass, if you only know the period and radius of the conditioned planet), simply input `0` and `Inf` for the min and max values.
 
+3. Choose whether or not the conditioned planet must also transit:
+```julia
+add_param_fixed(sim_param,"cond_also_transits", true) # true for transiting, false for isotropic distribution (may or may not transit)
+```
 
+4. Due to the nature of the rejection sampling, the narrower the conditioned ranges are (and especially if the conditioned planets must also transit), the longer the simulations will take! We also advise reducing the total number of simulated systems:
+```julia
+add_param_fixed(sim_param,"num_targets_sim_pass_one", 1000) # how many systems with conditioned planets to collect in total
+```
 
-## How do I make plots similar to those in the papers?
+5. Move into a directory where you want your simulated catalogs to be saved and run the script "generate_catalogs.jl" in "examples/" in Julia. For example, you can navigate to "examples/", start Julia, and run:
+```julia
+include("generate_catalogs.jl")
+```
 
-While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (3.7) code that was written by Matthias He. We provide these Python scripts in the "plotting/" directory but do not fully maintain or document them yet...
-
-
-
-## What if I need help?
-
-Feel free to email Matthias He at myh7@psu.edu!
+As before, the physical catalog will contain all the simulated systems (you can check that each system contains at least one planet satisfying the conditioning bounds), while the observed catalog will only contain the measured properties of Kepler-detected planets.
