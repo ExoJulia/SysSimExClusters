@@ -15,8 +15,8 @@ We develop and provide several *statistical* models for describing the intrinsic
 In addition to these papers describing the new models, the simulated catalogs from these models have been directly used for several other publications:
 
 * [Gilbert and Fabrycky (2020), AJ, 159, 281 (17pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....159..281G/abstract) \[[arXiv](https://arxiv.org/abs/2003.11098)\]
-* Millholland, He, Ford, et al. (2021), submitted to AAS Journals
-* He, Ford, and Ragozzine (2021b), submitted to AAS Journals
+* [Millholland, He, Ford, et al. (2021), accepted to AAS Journals](https://ui.adsabs.harvard.edu/abs/2021arXiv210615589M/abstract), \[[arXiv](https://arxiv.org/abs/2106.15589)\]
+* [He, Ford, and Ragozzine (2021b), under review in AAS Journals](https://ui.adsabs.harvard.edu/abs/2021arXiv210504703H/abstract), \[[arXiv](https://arxiv.org/abs/2105.04703)\]
 
 **Important:** We have a separate code branch for each paper (e.g. "He_Ford_Ragozzine_2019", "He_Ford_Ragozzine_2020", "He_et_al_2020b"); these should be used if you want to run our code instead of the master branch, which is actively being updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
 
