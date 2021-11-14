@@ -1,6 +1,6 @@
 # SysSimExClusters
 
-He, Ford, & Ragozzine (2021b), submitted to AAS Journals
+[He, Ford, & Ragozzine (2021b), AJ, 162, 216 (22pp)](https://ui.adsabs.harvard.edu/abs/2021AJ....162..216H/abstract) [[arXiv](https://arxiv.org/abs/2105.04703)]
 
 
 This paper utilizes the same model ("Maximum AMD model") from "Paper III"; refer to that paper for a full description of the model.
