@@ -6,7 +6,7 @@
 
 ## To download simulated catalogs from our models:
 
-* Go to the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder.
+* Go to the [SysSimExClusters Simulated Catalogs](https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/myh7_psu_edu/Ei7QJqnmaCBGipPM4uMzrusBjw_hUwo0KfIDBe-0UTYyMw) folder.
 * Navigate into "He_et_al_2020b/" and through the subdirectories. 
 * Download the "physical_catalogs.zip" file, which contains many "physical_catalogX.csv" tables (X = an index/number) including all the physical planets in each simulated catalog.
 
