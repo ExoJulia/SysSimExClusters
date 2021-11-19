@@ -1,38 +1,43 @@
 # SysSimExClusters
 
-He et al (2020b) (Paper III): \[submitted to AJ\] \[[arXiv](https://arxiv.org/abs/2007.14473)\]
-
+[He et al (2020), AJ, 160, 276 (38pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....160..276H/abstract) ("Paper III") \[[arXiv](https://arxiv.org/abs/2007.14473)\]
 
 
 
 ## To download simulated catalogs from our models:
 
-* Go to the [SysSimExClusters Simulated Catalogs](https://psu.box.com/s/v09s9fhbmyele911drej29apijlxsbp3) folder.
+* Go to the [SysSimExClusters Simulated Catalogs](https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/myh7_psu_edu/Ei7QJqnmaCBGipPM4uMzrusBjw_hUwo0KfIDBe-0UTYyMw) folder.
 * Navigate into "He_et_al_2020b/" and through the subdirectories. 
 * Download the "physical_catalogs.zip" file, which contains many "physical_catalogX.csv" tables (X = an index/number) including all the physical planets in each simulated catalog.
 
-| target_id | star_id | planet_mass    | planet_radius | clusterid | period     | ecc      | incl_mut  | incl      | star_mass      | star_radius |
-|-----------|---------|----------------|---------------|-----------|------------|----------|-----------|-----------|----------------|-------------|
-|           |         | (solar masses) | (solar radii) |           | (days)     |          | (radians) | (radians) | (solar masses) | (solar radii) |
-| 1         | 23415   | 1.5826e-6      | 0.0080        | 1         | 24.6532    | 0.1009   | 0.0821    | 0.8209    | 0.75           | 0.735       |
-| ...       | ...     | ...            | ...           | ...       | ...        | ...      | ...       | ...       | ...            | ...         |
-
-Note that compared to the physical catalogs from Paper II, these files have an extra column (the inclination relative to the sky plane, "incl").
+| target_id | star_id | planet_mass    | planet_radius | clusterid | period     | ecc      | incl      | omega     | asc_node   | mean_anom | incl_invariable | asc_node_invariable | star_mass      | star_radius |
+|-----------|---------|----------------|---------------|-----------|------------|----------|-----------|-----------|------------|-----------|-----------------|---------------------|----------------|-------------|
+|           |         | (solar masses) | (solar radii) |           | (days)     |          | (radians) | (radians) | (radians)  | (radians) | (radians)       | (radians)           | (solar masses) | (solar radii) |
+| 1         | 32722   | 2.3983e-5      | 0.0366        | 1         | 13.0340    | 0.0124   | 1.1409    | -2.6147   | 5.5608     | 1.1570    | 0.0298          | 4.6866              | 1.031          | 1.32        |
+| ...       | ...     | ...            | ...           | ...       | ...        | ...      | ...       | ...       | ...        | ...       | ...             | ...                 | ...            | ...         |
 
 * Download the "observed_catalogs.zip" file, which contains many "observed_catalogX.csv" tables (X = an index/number) including all the observed planets that a simulated Kepler mission would detect given the true planetary systems listed in "physical_catalogX.csv".
 
-| target_id | star_id | period    | depth   | duration | star_mass      | star_radius |
-|-----------|---------|-----------|---------|----------|----------------|-------------|
-|           |         | (days)    |         | (days)   | (solar masses) | (solar radii) |
-| 250       | 62933   | 127.1125  | 0.00075 | 0.3246   | 1.074          | 1.146       |
-| ...       | ...     | ...       | ...     | ...      | ...            | ...         |
+| target_id | star_id | period    | period_err | depth   | depth_err | duration | duration_err    | star_mass      | star_radius |
+|-----------|---------|-----------|------------|---------|-----------|----------|-----------------|----------------|-------------|
+|           |         | (days)    | (days)     |         |           | (days)   | (days)          | (solar masses) | (solar radii) |
+| 65        | 77706   | 4.3019    | 0.0004     | 0.0015  | 2.6409e-5 | 0.0835   | 0.00097         | 0.778          | 0.745       |
+| ...       | ...     | ...       | ...        | ...     | ...       | ...      | ...             | ...            | ...         |
 
 In each of these files, the header contains all the parameters of the model used to generate that catalog.
 
 For each planet (row),
-* **target_id** refers to the index of the star in the simulation (e.g. 1 for the first star in the simulation) the planet orbits,
-* **star_id** refers to the index of the star based on where it is in the input stellar catalog (i.e. the row number in the "q1_q17_dr25_gaia_fgk_cleaned.csv" catalog, which can be found in the "plotting/" directory), and
-* **clusterid** is a cluster identifier (i.e., which "cluster" in the system the planet belongs to).
+* **target_id**: the index of the star in the simulation (e.g. 1 for the first star in the simulation) the planet orbits
+* **star_id**: the index of the star based on where it is in the input stellar catalog (i.e. the row number in the "q1_q17_dr25_gaia_fgk_cleaned.csv" catalog, which can be found in the "plotting/" directory)
+* **clusterid**: a cluster identifier (i.e., which "cluster" in the system the planet belongs to)
+* **incl**: inclination of the orbit relative to the sky plane
+* **omega**: argument of periapse relative to the sky plane
+* **asc_node**: argument of ascending node relative to the sky plane
+* **mean_anom**: mean anomaly relative to the sky plane
+* **incl_invariable**: inclination relative to the system invariable plane
+* **asc_node_invariable**: argument of ascending node relative to the system invariable plane
+
+All other fields should be self explanatory.
 Note that indexing starts at 1 in Julia. Stars without any planets are not included in these tables.
 
 
