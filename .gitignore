@@ -3,7 +3,6 @@
 *.jl.mem
 deps/deps.jl
 *.jl~
-Manifest.toml
 julia_types
 libcorbits.so
 profile*
