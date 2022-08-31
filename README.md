@@ -17,13 +17,17 @@ In addition to these papers describing the new models, the simulated catalogs fr
 * [Gilbert and Fabrycky (2020), AJ, 159, 281 (17pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....159..281G/abstract) \[[arXiv](https://arxiv.org/abs/2003.11098)\]
 * [Millholland, He, Ford, et al. (2021), AJ, 162, 166 (17pp)](https://ui.adsabs.harvard.edu/abs/2021arXiv210615589M/abstract), \[[arXiv](https://arxiv.org/abs/2106.15589)\]
 * [He, Ford, and Ragozzine (2021b), AJ, 162, 216 (22pp)](https://ui.adsabs.harvard.edu/abs/2021arXiv210504703H/abstract), \[[arXiv](https://arxiv.org/abs/2105.04703)\]
+* [Millholland, He, and Zink (2022), AJ, 164, 72 (15pp)](https://ui.adsabs.harvard.edu/abs/2022AJ....164...72M/abstract), \[[arXiv](https://arxiv.org/abs/2207.10068)\]
+* [He and Ford (submitted to AJ)](https://ui.adsabs.harvard.edu/abs/2022arXiv220809031H/abstract), \[[arXiv](https://arxiv.org/abs/2208.09031)\]
 
 **Important:** We have a separate code branch for each paper that provides new models or functionality:
 
 * "He_Ford_Ragozzine_2019" branch for He, Ford, and Ragozzine (2019)
 * "He_Ford_Ragozzine_2020" branch for He, Ford, and Ragozzine (2021a)
 * "He_et_al_2020" branch for He et al. (2020)
-* "He_Ford_Ragozzine_2021b" branch for He, Ford, and Ragozzine (2021b)
+* "He_Ford_Ragozzine_2021b" branch for He, Ford, and Ragozzine (2021b)\**
+
+\**This branch does not introduce any new models, but enables the option of drawing systems from a model *conditioned* on a given planet (e.g. within a period and radius range, transiting or not, etc.).
 
 These should be used if you want to run our code instead of the master branch, which is actively being updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch.
 
@@ -62,10 +66,10 @@ Refer to the README of the branch containing the model you want to simulate from
 
 ## How do I make plots similar to those in the papers?
 
-While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (3.7) code written by Matthias He. These Python scripts are accessible in the [SysSim_Plotting](https://github.com/hematthi/SysSim_Plotting) package.
+While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (3.7) code written by Matthias He. These Python scripts are accessible in the [SysSimPyPlots](https://github.com/hematthi/SysSimPyPlots) package (pip installable distribution and documentation coming soon!).
 
 
 
 ## What if I need help?
 
-Feel free to email Matthias He at myh7@psu.edu!
+Feel free to email Matthias He at mhe@nd.edu!
