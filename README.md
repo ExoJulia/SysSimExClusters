@@ -1,83 +1,122 @@
 # SysSimExClusters
 
-This repository provides a comprehensive forward modelling framework for studying planetary systems.
+[He \& Ford (2026), ApJ, 1001, 78 (34pp)](https://ui.adsabs.harvard.edu/abs/2026ApJ..1001...78H/abstract) ("Paper IV") \[[arXiv](https://arxiv.org/abs/2601.13480)\]
 
-<center><img src="/cartoons/Clustered_P_R_observed.gif" alt="Best fit clustered models" width="800"/></center>  
-
-We develop and provide several *statistical* models for describing the intrinsic planetary systems, their architectures, and the correlations within multi-planet systems, using the Kepler population of exoplanet candidates. Our specific models are described in the following papers:
-
-* [He, Ford, and Ragozzine (2019), MNRAS, 490, 4575 (30pp)](https://ui.adsabs.harvard.edu/abs/2019MNRAS.490.4575H/abstract) ("Paper I") \[[arXiv](https://arxiv.org/abs/1907.07773)\]
-* [He, Ford, and Ragozzine (2021a)\*, AJ, 161, 16 (24pp)](https://ui.adsabs.harvard.edu/abs/2021AJ....161...16H/abstract) ("Paper II") \[[arXiv](https://arxiv.org/abs/2003.04348)\]
-* [He et al. (2020), AJ, 160, 276 (38pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....160..276H/abstract) ("Paper III") \[[arXiv](https://arxiv.org/abs/2007.14473)\]
-* [He and Ford (2026), ApJ, 1001, 78 (34pp)](https://ui.adsabs.harvard.edu/abs/2026ApJ..1001...78H/abstract) ("Paper IV") \[[arXiv](https://arxiv.org/abs/2601.13480)\]
-
-\*Paper II was published shortly after Paper III due to an extended referee process.
-
-In addition to these papers describing the new models, the simulated catalogs from these models have been directly used for several other publications:
-
-* [Gilbert and Fabrycky (2020), AJ, 159, 281 (17pp)](https://ui.adsabs.harvard.edu/abs/2020AJ....159..281G/abstract) \[[arXiv](https://arxiv.org/abs/2003.11098)\]
-* [Millholland, He, Ford, et al. (2021), AJ, 162, 166 (17pp)](https://ui.adsabs.harvard.edu/abs/2021arXiv210615589M/abstract), \[[arXiv](https://arxiv.org/abs/2106.15589)\]
-* [He, Ford, and Ragozzine (2021b), AJ, 162, 216 (22pp)](https://ui.adsabs.harvard.edu/abs/2021arXiv210504703H/abstract), \[[arXiv](https://arxiv.org/abs/2105.04703)\]
-* [Millholland, He, and Zink (2022), AJ, 164, 72 (15pp)](https://ui.adsabs.harvard.edu/abs/2022AJ....164...72M/abstract), \[[arXiv](https://arxiv.org/abs/2207.10068)\]
-* [He and Ford (2022), AJ, 164, 210 (10pp)](https://ui.adsabs.harvard.edu/abs/2022AJ....164..210H/abstract), \[[arXiv](https://arxiv.org/abs/2208.09031)\]
-
-**Important:** We have a separate code branch for each paper that provides new models or functionality:
-
-* "He_Ford_Ragozzine_2019" branch for He, Ford, and Ragozzine (2019)
-* "He_Ford_Ragozzine_2020" branch for He, Ford, and Ragozzine (2021a)
-* "He_et_al_2020" branch for He et al. (2020)
-* "He_Ford_Ragozzine_2021b" branch for He, Ford, and Ragozzine (2021b)\**
-* "He_Ford_2026" branch for He \& Ford (2026)
-
-\**This branch does not introduce any new models, but enables the option of drawing systems from a model *conditioned* on a given planet (e.g. within a period and radius range, transiting or not, etc.).
-
-These should be used if you want to run our code instead of the master branch, which may be actively updated. In addition, the README file is different for each branch, and we provide more details for the models and code usage specific to each paper/branch. **He and Ford (2026) contains the most recent models (the "hybrid models") and thus we recommend using the "He_Ford_2026" branch for simulating new catalogs.**
+<center><img src="/cartoons/Hybrid_model_cartoon_no_steps.png" alt="Cartoon illustration of the hybrid models" width="600"/></center>  
 
 
 
-## How do I use these models?
+## To download simulated catalogs from our models:
 
-We provide a large set of simulated catalogs from our models in the [SysSim Catalogs](https://drive.google.com/drive/folders/1hUsNwjtF0Y8Y8PCxORrQfcWPlFKh-rFl) folder. If you simply wish to use these simulated catalogs as examples of our models, then no installation is required! Simply download any of these tables and use them for your own science. To be able to use them, you must understand that we provide two types of catalogs:
+* Go to the [SysSim Catalogs Google Drive](https://drive.google.com/drive/folders/1hUsNwjtF0Y8Y8PCxORrQfcWPlFKh-rFl).
+* Navigate into "HM-C/" and pick a folder ("100 catalogs, depth_min 0.29" is recommended for the best models). 
+* Download the "physical_catalogs.zip" file, which contains many "physical_catalogX.csv" tables (X = an index/number) including all the physical planets in each simulated catalog.
 
-* *Physical catalog:* a set of intrinsic, physical planetary systems (before any observations; contains properties like the true orbital periods, planet radii, etc.)
-* *Observed catalog:* a set of transiting and detected planet candidates derived from a *physical catalog* (after a Kepler-like mission; contains properties like the measured orbital periods, transit depths, etc.)
+| target_id | star_id | planet_mass    | planet_radius | clusterid | period     | ecc      | incl      | omega     | asc_node   | mean_anom | incl_invariable | asc_node_invariable | star_mass      | star_radius |
+|-----------|---------|----------------|---------------|-----------|------------|----------|-----------|-----------|------------|-----------|-----------------|---------------------|----------------|-------------|
+|           |         | (solar masses) | (solar radii) |           | (days)     |          | (radians) | (radians) | (radians)  | (radians) | (radians)       | (radians)           | (solar masses) | (solar radii) |
+| 1         | 60465   | 3.8166e-7      | 0.0048        | 1         | 21.1215    | 0.2292   | 1.3397    | 2.9827    | 5.8627     | 2.5189    | 0.1540          | 2.7316              | 1.098          | 1.254       |
+| ...       | ...     | ...            | ...           | ...       | ...        | ...      | ...       | ...       | ...        | ...       | ...             | ...                 | ...            | ...         |
 
-Refer to the README of the branch specific to each paper for complete details on what each set of catalogs contains.
+* Download the "observed_catalogs.zip" file, which contains many "observed_catalogX.csv" tables (X = an index/number) including all the observed planets that a simulated Kepler mission would detect given the true planetary systems listed in "physical_catalogX.csv".
+
+| target_id | star_id | period    | period_err | depth   | depth_err | duration | duration_err    | star_mass      | star_radius |
+|-----------|---------|-----------|------------|---------|-----------|----------|-----------------|----------------|-------------|
+|           |         | (days)    | (days)     |         |           | (days)   | (days)          | (solar masses) | (solar radii) |
+| 193       | 1132    | 5.9486    | 0.0009     | 0.0007  | 1.9547e-5 | 0.1209   | 0.00182         | 0.983          | 0.973       |
+| ...       | ...     | ...       | ...        | ...     | ...       | ...      | ...             | ...            | ...         |
+
+In each of these files, the header contains all the parameters of the model used to generate that catalog.
+
+:mega: **NOTE: The formats of these tables have NOT changed compared to the simulated catalogs from the previous models, so any functions used to load the previous tables should also work on these new files.**
+
+For each planet (row):
+* **target_id**: the index of the star in the simulation (e.g. 1 for the first star in the simulation) the planet orbits
+* **star_id**: the index of the star based on where it is in the input stellar catalog (i.e. the row number in the "q1_q17_dr25_gaia_fgk_cleaned.csv" catalog, which can be found in the "plotting/" directory)
+* **clusterid**: a cluster identifier (i.e., which "cluster" in the system the planet belongs to)
+* **incl**: inclination of the orbit relative to the sky plane
+* **omega**: argument of periapse relative to the sky plane
+* **asc_node**: argument of ascending node relative to the sky plane
+* **mean_anom**: mean anomaly relative to the sky plane
+* **incl_invariable**: inclination relative to the system invariable plane
+* **asc_node_invariable**: argument of ascending node relative to the system invariable plane
+
+All other fields should be self explanatory.
+Note that indexing starts at 1 in Julia. Stars without any planets are not included in these tables.
 
 
 
-## How do I simulate my own (physical and observed) catalogs?
+## To simulate new catalogs from the "Hybrid models" (He \& Ford 2026) on your own:
 
-### Installation:
+The procedure for simulating catalogs from the new model is the same as before. To generate one simulated catalog (physical and observed) with a user defined set of model parameters:
 
-* You will need to first install the [ExoplanetsSysSim](https://github.com/ExoJulia/ExoplanetsSysSim.jl) package and set up some additional repositories; follow the instructions listed in the README of that page.
-* Clone this repository.
+1. Move into the "src/" directory and edit the file "param_common.jl". Set a value for each of the model parameters. The relevant parameters of the hybrid models are:
+```julia
+add_param_active(sim_param, "log_rate_clusters", log(0.40)) # the (log) mean number of clusters per system
+add_param_active(sim_param, "log_rate_planets_per_cluster", log(2.12)) # the (log) mean number of planets per cluster
+add_param_active(sim_param, "power_law_P", -0.1) # the period power-law index
+add_param_fixed(sim_param, "sigma_logperiod_per_pl_in_cluster", 0.25) # the cluster width (std) in log-period, per planet in the cluster, of each cluster's period distribution
+add_param_active(sim_param, "mean_ln_mass", 0.35) # the mean log-mass of the initial planet mass distribution, in ln(Earth masses)
+add_param_active(sim_param, "sigma_ln_mass", 1.6) # the standard deviation in log-mass of the initial planet mass distribution, in ln(Earth masses)
+add_param_active(sim_param, "norm_radius", 2.1) # the normalization radius (corresponding to an initial mass of 1 Earth mass), in Earth radii
+add_param_fixed(sim_param, "break1_mass", 20.) # the break mass, in Earth masses
+add_param_active(sim_param, "power_law_γ0", 0.07) # the radius-mass power-law index below the break mass
+add_param_fixed(sim_param, "power_law_γ1", 0.5) # the radius-mass power-law index above the break mass
+add_param_active(sim_param, "power_law_σ0", 0.23) # the spread (std) around the mean radius, below the break mass
+add_param_fixed(sim_param, "power_law_σ1", 0.3) # the spread (std) around the mean radius, above the break mass
+add_param_active(sim_param, "log_α_pret", log(8.)) # normalization factor for the envelope retention probability
+add_param_active(sim_param, "sigma_hk", 0.25) # the eccentricity (Rayleigh) scale for true singles
 ```
-git clone git@github.com:ExoJulia/SysSimExClusters.git
+:twisted_rightwards_arrows: **There are two types of Hybrid Models: "Unclustered" (HM-U) vs. "Clustered" (HM-C).** To simulate catalogs from the **HM-C** (the preferred model), also set the cluster width (std) in log-mass of the initial planet mass distribution:
+```julia
+add_param_active(sim_param, "sigma_ln_mass_in_cluster", 0.48) # for clustered initial masses, in ln(Earth masses)
 ```
-* Switch to the branch of this repository containing the model you want to simulate from. For example, to simulate models from the most recent paper, do:
+If you want to simulate from the **HM-U** instead, do NOT set this parameter (i.e., this line should be commented out).
+
+:bulb: **NOTE:** as before, there is no difference between setting a parameter as "active" vs. "fixed" for the purposes of simulating a catalog. This is only used for choosing which parameters to vary if one wants to run optimization algorithms on the models.
+
+2. Move into a directory where you want your simulated catalogs to be saved and run the script "generate_catalogs.jl" in "examples/" in Julia. For example, you can navigate to "examples/", start Julia, and run:
+```julia
+include("generate_catalogs.jl")
 ```
-git checkout He_Ford_2026
-```
+This will generate the following files:
+* Physical and observed catalogs of planets (and stars) in table format:
+  * "physical_catalog.csv"
+  * "physical_catalog_stars.csv"
+  * "observed_catalog.csv"
+  * "observed_catalog_stars.csv"
 
-### Usage:
+These files are analogous to the simulated catalogs we provide as described above.
 
-Refer to the README of the branch containing the model you want to simulate from for steps.
+In addition, the following files will also be generated:
+* Individual files with the true cluster id's, periods, orbital eccentricities, mutual inclinations, sky inclinations, planet radii, planet masses, stellar radii, and stellar masses, of all the planets per system (and stars with planets) in the physical catalog:
+  * "clusterids_all.out"
+  * "periods_all.out"
+  * "eccentricities_all.out"
+  * "mutualinclinations_all.out"
+  * "inclinations_all.out"
+  * "radii_all.out"
+  * "masses_all.out"
+  * "stellar_radii_with_planets.out"
+  * "stellar_masses_with_planets.out"
 
+The data in these files are the same as those in "physical_catalog.csv", just organized in a different format.
 
+* Individual files with the planets' *initial* radii, masses, and envelope masses (i.e., before envelope mass-loss due to photoevaporation), as well as the mass-loss timescales, envelope retention probabilities, and envelope retention booleans, of all the planets per system in the physical catalog:
+  * **"initial_radii_all.out"**
+  * **"initial_masses_all.out"**
+  * **"envelope_masses_all.out"**
+  * **"mass_loss_timescales_all.out"**
+  * **"prob_retained_all.out"**
+  * **"envelope_retained_all.out"**
 
-## How do I make plots similar to those in the papers?
+**NOTE:** these files (bolded) are only generated for the new models (i.e. **HM-U** and **HM-C**). This data is NOT provided in the tables/csv files.
 
-While the core ExoplanetsSysSim and SysSimExClusters code is written in Julia, almost all of the figures produced for the paper are generated from Python (3.7) code written by Matthias He.
+* Individual files with the observed periods, transit depths, transit durations, stellar radii, and stellar masses of all the planets (and stars with observed planets) in the observed catalog:
+  * "periods.out"
+  * "depths.out"
+  * "durations.out"
+  * "stellar_radii_obs.out"
+  * "stellar_masses_obs.out"
 
-:mega: UPDATE 09/20/22: :tada: This code is now available in the pip-installable Python package [SysSimPyPlots](https://syssimpyplots.readthedocs.io/en/latest/index.html), with detailed documentation and tutorials!
-
-:mega: UPDATE 09/29/22: :tada: In addition, the pip-installable Python package [SysSimPyMMEN](https://syssimpymmen.readthedocs.io/en/latest/) is also available and was used to generate the figures in [He and Ford (2022)](https://ui.adsabs.harvard.edu/abs/2022AJ....164..210H/abstract).
-
-You do NOT need to download SysSimExClusters in order to use these Python packages (with existing simulated catalogs).
-
-
-
-## What if I need help?
-
-Feel free to email Matthias He at matthias.he@alumni.utoronto.ca!
+The data in these files are the same as those in "observed_catalog.csv", just organized in a different format (sorted into systems with 1, 2, 3, ..., and 8 observed planets). For the simulated catalogs in the SysSim Catalogs folder, these files are also provided in the "catalogs_separate.zip" file.
